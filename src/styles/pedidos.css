@@ -1,0 +1,145 @@
+.pedidos-container {
+  padding: 40px;
+  background-color: #f1f5f9;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
+.pedidos-header {
+  margin-bottom: 32px;
+}
+
+.pedidos-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.pedidos-subtitle {
+  margin-top: 8px;
+  color: #64748b;
+}
+
+.pedidos-card {
+  background-color: white;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.form-grid input {
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background-color: white;
+  color: #1e293b;
+}
+
+.crear-btn {
+  background-color: #4f46e5;
+  color: white;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.crear-btn:hover {
+  background-color: #4338ca;
+}
+
+.pedidos-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.pedidos-table th {
+  background-color: #e2e8f0;
+  padding: 14px;
+  text-align: left;
+}
+
+.pedidos-table td {
+  padding: 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.estado {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pendiente {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.aceptado {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.rechazado {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.acciones {
+  display: flex;
+  gap: 10px;
+}
+
+.aceptar-btn {
+  background-color: #22c55e;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.rechazar-btn {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+body {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+input {
+  background-color: white;
+  color: #1e293b;
+}
+
+table {
+  background-color: white;
+}
+
+th {
+  background-color: #e2e8f0;
+  color: #1e293b;
+}
+
+td {
+  background-color: white;
+  color: #475569;
+}

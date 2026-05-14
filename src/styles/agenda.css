@@ -1,0 +1,87 @@
+.agenda-container {
+  padding: 40px;
+  background-color: #f1f5f9;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
+.agenda-header {
+  margin-bottom: 32px;
+}
+
+.agenda-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.agenda-subtitle {
+  margin-top: 8px;
+  color: #64748b;
+}
+
+.agenda-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.agenda-card {
+  background-color: white;
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.agenda-time {
+  min-width: 140px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #4f46e5;
+}
+
+.agenda-content {
+  flex: 1;
+}
+
+.agenda-content h3 {
+  font-size: 18px;
+  color: #1e293b;
+}
+
+.agenda-content p {
+  margin-top: 6px;
+  color: #475569;
+}
+
+.agenda-content span {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.estado {
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.curso {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.proximo {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.finalizado {
+  background-color: #e2e8f0;
+  color: #334155;
+}   
