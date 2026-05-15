@@ -1,82 +1,79 @@
+import { useForm } from 'react-hook-form';
 import {
+  Box,
   Button,
+  FormControl,
+  InputLabel,
   MenuItem,
-  Stack,
+  Select,
   TextField,
 } from '@mui/material';
 
-import { useForm } from 'react-hook-form';
-import type{ Pedido } from '../../types/pedido';
-import type{ Laboratorio } from '../../types/laboratorio';
+import type { Pedido } from '../../types/pedido';
 
 interface Props {
-  laboratorios: Laboratorio[];
-  onSubmitPedido: (pedido: Pedido) => void;
+  onSubmitPedido: (data: Pedido) => void;
+  laboratorios: any[]; // Lista de laboratorios reales para el menú desplegable
 }
 
-export default function PedidoForm({
-  laboratorios,
-  onSubmitPedido,
-}: Props) {
+export default function PedidoForm({ onSubmitPedido, laboratorios }: Props) {
   const { register, handleSubmit, reset } = useForm<Pedido>();
 
   const onSubmit = (data: Pedido) => {
     onSubmitPedido({
       ...data,
+      // Aseguramos que los valores numéricos se envíen correctamente
+      cantidadAlumnos: Number(data.cantidadAlumnos),
+      laboratorioId: Number(data.laboratorioId),
       estado: 'Pendiente',
-      usuarioId: 1,
     });
 
     reset();
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <Stack spacing={2}>
-        <TextField
-          type="date"
-          {...register('fecha', { required: true })}
-        />
+    <Box
+      component="form"
+      onSubmit={handleSubmit(onSubmit)}
+      sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 400, mt: 2 }}
+    >
+      <TextField
+        label="Fecha"
+        type="date"
+        InputLabelProps={{ shrink: true }}
+        {...register('fecha', { required: true })}
+        fullWidth
+      />
 
-        <TextField
-          label="Hora inicio"
-          type="time"
-          InputLabelProps={{
-            shrink: true,
-          }}
-          {...register(
-            'horaInicio',
-            { required: true }
-          )}
-        />
+      <TextField
+        label="Hora Inicio (ej: 08:00)"
+        placeholder="08:00"
+        type="text"
+        {...register('horaInicio', { required: true })}
+        fullWidth
+      />
 
-        <TextField
-          label="Hora fin"
-          type="time"
-          InputLabelProps={{
-            shrink: true,
-          }}
-          {...register(
-            'horaFin',
-            { required: true }
-          )}
-        />
+      <TextField
+        label="Hora Fin (ej: 10:00)"
+        placeholder="10:00"
+        type="text"
+        {...register('horaFin', { required: true })}
+        fullWidth
+      />
 
-        <TextField
-          label="Cantidad de alumnos"
-          type="number"
-          {...register(
-            'cantidadAlumnos',
-            {
-              required: true,
-              min: 1,
-            }
-          )}
-        />
+      <TextField
+        label="Cantidad de Alumnos"
+        type="number"
+        {...register('cantidadAlumnos', { required: true })}
+        fullWidth
+      />
 
-        <TextField
-          select
+      <FormControl fullWidth>
+        <InputLabel id="laboratorio-select-label">Laboratorio</InputLabel>
+        <Select
+          labelId="laboratorio-select-label"
           label="Laboratorio"
+          defaultValue=""
           {...register('laboratorioId', { required: true })}
         >
           {laboratorios.map((lab) => (
@@ -84,20 +81,12 @@ export default function PedidoForm({
               {lab.nombre}
             </MenuItem>
           ))}
-        </TextField>
+        </Select>
+      </FormControl>
 
-        <TextField
-          label="Descripción"
-          {...register(
-            'descripcion',
-            { required: true }
-          )}
-        />
-
-        <Button type="submit" variant="contained">
-          Crear pedido
-        </Button>
-      </Stack>
-    </form>
+      <Button type="submit" variant="contained" color="primary" fullWidth>
+        Crear Pedido
+      </Button>
+    </Box>
   );
 }

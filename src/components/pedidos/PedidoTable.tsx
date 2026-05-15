@@ -20,6 +20,14 @@ export default function PedidoTable({
   aceptarPedido,
   rechazarPedido,
 }: Props) {
+  
+  // 1. Leemos el usuario guardado para saber su rol
+  const usuarioStorage = localStorage.getItem('usuario');
+  const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
+  
+  // 2. Verificamos si tiene permisos (cualquiera que NO sea Alumno)
+  const puedeAprobar = usuarioLogueado && usuarioLogueado.rol !== 'Alumno';
+
   return (
     <Table>
       <TableHead>
@@ -29,7 +37,10 @@ export default function PedidoTable({
           <TableCell>Laboratorio</TableCell>
           <TableCell>Alumnos</TableCell>
           <TableCell>Estado</TableCell>
-          <TableCell>Acciones</TableCell>
+          
+          {/* Condicionamos la cabecera de la columna */}
+          {puedeAprobar && <TableCell>Acciones</TableCell>}
+          
         </TableRow>
       </TableHead>
 
@@ -45,15 +56,26 @@ export default function PedidoTable({
             <TableCell>{pedido.Laboratorio?.nombre}</TableCell>
             <TableCell>{pedido.cantidadAlumnos}</TableCell>
             <TableCell>{pedido.estado}</TableCell>
-            <TableCell>
-              <Button onClick={() => aceptarPedido(pedido.id)}>
-                Aceptar
-              </Button>
+            
+            {/* Condicionamos los botones de acción */}
+            {puedeAprobar && (
+              <TableCell>
+                <Button 
+                  onClick={() => aceptarPedido(pedido.id)} 
+                  color="primary"
+                >
+                  Aceptar
+                </Button>
 
-              <Button onClick={() => rechazarPedido(pedido.id)}>
-                Rechazar
-              </Button>
-            </TableCell>
+                <Button 
+                  onClick={() => rechazarPedido(pedido.id)} 
+                  color="error"
+                >
+                  Rechazar
+                </Button>
+              </TableCell>
+            )}
+            
           </TableRow>
         ))}
       </TableBody>
