@@ -45,7 +45,7 @@ export default function Pedidos() {
     } catch (error){
       console.error(error);
 
-      alert("Error creando pedido");
+      alert("No se pudo crear: " + error.message);
     }
   };
 
