@@ -6,6 +6,7 @@ import { getPedidos, createPedido, updatePedido } from '../api/pedidos';
 import { getLaboratorios } from '../api/laboratorios';
 import type { Pedido } from '../types/pedido';
 import  AppLayout  from '../components/layout/AppLayout';
+import "../styles/pedidos.css";
 
 export default function Pedidos() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
@@ -103,20 +104,113 @@ export default function Pedidos() {
 
   return (
     <AppLayout>
-      <div>
-        <h1>Pedidos</h1>
 
-        <PedidoForm
-          laboratorios={laboratorios}
-          onSubmitPedido={agregarPedido}
+      <div className="pedidos-page">
+
+        {/* HEADER */}
+
+        <div className="pedidos-header">
+
+          <h1 className="pedidos-title">
+            Gestión de Pedidos
+          </h1>
+
+          <p className="pedidos-subtitle">
+            Administrá reservas y solicitudes de laboratorios
+          </p>
+
+        </div>
+
+        {/* STATS */}
+
+        <div className="pedidos-stats">
+
+          <div className="pedidos-stat-card">
+
+            <h2 className="pedidos-stat-title">
+              Pedidos Totales
+            </h2>
+
+            <p className="pedidos-stat-number">
+              {pedidos.length}
+            </p>
+
+          </div>
+
+          <div className="pedidos-stat-card">
+
+            <h2 className="pedidos-stat-title">
+              Pendientes
+            </h2>
+
+            <p className="pedidos-stat-number">
+              {
+                pedidos.filter(
+                  (pedido) =>
+                    pedido.estado === "Pendiente"
+                ).length
+              }
+            </p>
+
+          </div>
+
+          <div className="pedidos-stat-card">
+
+            <h2 className="pedidos-stat-title">
+              Aprobados
+            </h2>
+
+            <p className="pedidos-stat-number">
+              {
+                pedidos.filter(
+                  (pedido) =>
+                    pedido.estado === "Aprobado"
+                ).length
+              }
+            </p>
+
+          </div>
+
+          <div className="pedidos-stat-card">
+
+            <h2 className="pedidos-stat-title">
+              Rechazados
+            </h2>
+
+            <p className="pedidos-stat-number">
+              {
+                pedidos.filter(
+                  (pedido) =>
+                    pedido.estado === "Rechazado"
+                ).length
+              }
+            </p>
+
+          </div>
+
+        </div>
+
+        {/* CONTENT */}
+
+        <div className="pedidos-content">
+
+          <PedidoForm
+            laboratorios={laboratorios}
+            onSubmitPedido={agregarPedido}
           />
 
-        <PedidoTable
-          pedidos={pedidos}
-          aceptarPedido={aceptarPedido}
-          rechazarPedido={rechazarPedido}
+          <br />
+
+          <PedidoTable
+            pedidos={pedidos}
+            aceptarPedido={aceptarPedido}
+            rechazarPedido={rechazarPedido}
           />
+
+        </div>
+
       </div>
+
     </AppLayout>
   );
 }

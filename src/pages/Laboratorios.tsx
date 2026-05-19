@@ -5,11 +5,12 @@ import {
   getLaboratorios,
   createLaboratorio
 } from "../api/laboratorios";
-
+import { TextField, Button, } from "@mui/material";
 import type {
   Laboratorio
 } from "../types/laboratorio";
 
+import "../styles/laboratorio.css";
 import  AppLayout  from "../components/layout/AppLayout";
 
 export default function Laboratorios() {
@@ -125,107 +126,178 @@ export default function Laboratorios() {
   return (
 
     <AppLayout>
-      <div>
 
-        <h1>Laboratorios</h1>
+      <div className="laboratorios-page">
 
-        <form onSubmit={handleSubmit}>
+        {/* HEADER */}
 
-          <div>
+        <div className="laboratorios-header">
 
-            <input
-              type="text"
-              placeholder="Nombre"
-              value={nombre}
-              onChange={(e) =>
-                setNombre(e.target.value)
-              }
-            />
+          <h1 className="laboratorios-title">
+            Laboratorios
+          </h1>
 
-          </div>
-
-          <div>
-
-            <input
-              type="number"
-              placeholder="Capacidad"
-              value={capacidad}
-              onChange={(e) =>
-                setCapacidad(
-                  Number(e.target.value)
-                )
-              }
-            />
-
-          </div>
-
-          <div>
-
-            <input
-              type="text"
-              placeholder="Edificio"
-              value={edificio}
-              onChange={(e) =>
-                setEdificio(e.target.value)
-              }
-            />
-
-          </div>
-
-          <button type="submit">
-            Crear laboratorio
-          </button>
-
-        </form>      
-
-        {laboratorios.length === 0 ? (
-
-          <p>
-            No hay laboratorios cargados
+          <p className="laboratorios-subtitle">
+            Gestioná los laboratorios disponibles
           </p>
 
-        ) : (
+        </div>
 
-          laboratorios.map(
-            (lab: Laboratorio) => (
+        {/* STATS */}
 
-              <div
-                key={lab.id}
-                style={{
-                  border:
-                    "1px solid gray",
+        <div className="laboratorios-stats">
 
-                  padding: "1rem",
+          <div className="laboratorios-stat-card">
 
-                  marginBottom: "1rem",
+            <h2 className="laboratorios-stat-title">
+              Total Laboratorios
+            </h2>
 
-                  borderRadius: "8px",
+            <p className="laboratorios-stat-number">
+              {laboratorios.length}
+            </p>
+
+          </div>
+
+          <div className="laboratorios-stat-card">
+
+            <h2 className="laboratorios-stat-title">
+              Capacidad Total
+            </h2>
+
+            <p className="laboratorios-stat-number">
+              {
+                laboratorios.reduce(
+                  (acc, lab) => acc + lab.capacidad,
+                  0
+                )
+              }
+            </p>
+
+          </div>
+
+        </div>
+
+        {/* CONTENT */}
+
+        <div className="laboratorios-content">
+
+          <form onSubmit={handleSubmit}>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: "16px",
+              }}
+            >
+
+              <TextField
+                label="Nombre"
+                value={nombre}
+                onChange={(e) =>
+                  setNombre(e.target.value)
+                }
+                fullWidth
+              />
+
+              <TextField
+                label="Capacidad"
+                value={capacidad}
+                onChange={(e) => {
+
+                  const value = e.target.value;
+
+                  if (/^\d*$/.test(value)) {
+
+                    setCapacidad(
+                      value === ""
+                        ? 0
+                        : Number(value)
+                    );
+                  }
+
                 }}
-              >
+                fullWidth
+              />
 
-                <h3>
-                  {lab.nombre}
-                </h3>
+              <TextField
+                label="Edificio"
+                value={edificio}
+                onChange={(e) =>
+                  setEdificio(e.target.value)
+                }
+                fullWidth
+              />
 
-                <p>
-                  <strong>
-                    Capacidad:
-                  </strong>{" "}
-                  {lab.capacidad}
-                </p>
+            </div>
 
-                <p>
-                  <strong>
-                    Edificio:
-                  </strong>{" "}
-                  {lab.edificio}
-                </p>
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{ mt: 3 }}
+            >
+              Crear laboratorio
+            </Button>
 
-              </div>
-            )
-          )
-        )}
+          </form>
+
+          {/* GRID */}
+
+          <div className="laboratorios-grid">
+
+            {laboratorios.length === 0 ? (
+
+              <p>
+                No hay laboratorios cargados
+              </p>
+
+            ) : (
+
+              laboratorios.map(
+                (lab: Laboratorio) => (
+
+                  <div
+                    key={lab.id}
+                    className="laboratorio-card"
+                  >
+
+                    <h3 className="laboratorio-title">
+                      {lab.nombre}
+                    </h3>
+
+                    <p className="laboratorio-info">
+
+                      <strong>
+                        Capacidad:
+                      </strong>{" "}
+
+                      {lab.capacidad}
+
+                    </p>
+
+                    <p className="laboratorio-info">
+
+                      <strong>
+                        Edificio:
+                      </strong>{" "}
+
+                      {lab.edificio}
+
+                    </p>
+
+                  </div>
+                )
+              )
+            )}
+
+          </div>
+
+        </div>
+
       </div>
+
     </AppLayout>
   );
 }
