@@ -1,4 +1,5 @@
 import '../styles/inventario.css';
+import  AppLayout  from "../components/layout/AppLayout";
 
 export default function Inventario() {
 
@@ -45,76 +46,78 @@ export default function Inventario() {
   ];
 
   return (
-    <div className="inventario-container">
+    <AppLayout>
+      <div className="inventario-container">
 
-      <h1 className="inventario-title">
-        Inventario
-      </h1>
+        <h1 className="inventario-title">
+          Inventario
+        </h1>
 
-      <p className="inventario-subtitle">
-        Gestión de materiales y equipamiento
-      </p>
+        <p className="inventario-subtitle">
+          Gestión de materiales y equipamiento
+        </p>
 
-      {/* Materiales */}
+        {/* Materiales */}
 
-      <div className="inventario-card">
+        <div className="inventario-card">
 
-        <h2>Reactivos y Materiales</h2>
+          <h2>Reactivos y Materiales</h2>
 
-        <table className="inventario-table">
+          <table className="inventario-table">
 
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Stock</th>
-              <th>Unidad</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {materiales.map((material) => (
-              <tr key={material.id}>
-                <td>{material.nombre}</td>
-                <td>{material.stock}</td>
-                <td>{material.unidad}</td>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Stock</th>
+                <th>Unidad</th>
               </tr>
-            ))}
-          </tbody>
+            </thead>
 
-        </table>
+            <tbody>
+              {materiales.map((material) => (
+                <tr key={material.id}>
+                  <td>{material.nombre}</td>
+                  <td>{material.stock}</td>
+                  <td>{material.unidad}</td>
+                </tr>
+              ))}
+            </tbody>
+
+          </table>
+
+        </div>
+
+        {/* Equipos */}
+
+        <div className="inventario-card">
+
+          <h2>Equipamiento</h2>
+
+          <table className="inventario-table">
+
+            <thead>
+              <tr>
+                <th>Equipo</th>
+                <th>Ubicación</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {equipos.map((equipo) => (
+                <tr key={equipo.id}>
+                  <td>{equipo.nombre}</td>
+                  <td>{equipo.ubicacion}</td>
+                  <td>{equipo.estado}</td>
+                </tr>
+              ))}
+            </tbody>
+
+          </table>
+
+        </div>
 
       </div>
-
-      {/* Equipos */}
-
-      <div className="inventario-card">
-
-        <h2>Equipamiento</h2>
-
-        <table className="inventario-table">
-
-          <thead>
-            <tr>
-              <th>Equipo</th>
-              <th>Ubicación</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {equipos.map((equipo) => (
-              <tr key={equipo.id}>
-                <td>{equipo.nombre}</td>
-                <td>{equipo.ubicacion}</td>
-                <td>{equipo.estado}</td>
-              </tr>
-            ))}
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </div>
+    </AppLayout>  
   );
 }

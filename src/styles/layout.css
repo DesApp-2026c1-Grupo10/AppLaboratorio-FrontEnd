@@ -1,0 +1,35 @@
+.app-layout {
+  display: flex;
+
+  min-height: 100vh;
+
+  background-color: #F5F7FB;
+}
+
+/* SIDEBAR */
+
+.sidebar {
+  width: 240px;
+
+  flex-shrink: 0;
+}
+
+.sidebar .MuiDrawer-paper {
+  width: 240px;
+
+  box-sizing: border-box;
+
+  background-color: #0B1739;
+
+  color: white;
+}
+
+/* MAIN */
+
+.app-main {
+  flex-grow: 1;
+}
+
+.app-content {
+  padding: 24px;
+}

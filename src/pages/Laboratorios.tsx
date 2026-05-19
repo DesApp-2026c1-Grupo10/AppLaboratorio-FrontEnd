@@ -10,6 +10,8 @@ import type {
   Laboratorio
 } from "../types/laboratorio";
 
+import  AppLayout  from "../components/layout/AppLayout";
+
 export default function Laboratorios() {
 
   const [
@@ -122,107 +124,109 @@ export default function Laboratorios() {
 
   return (
 
-    <div>
+    <AppLayout>
+      <div>
 
-      <h1>Laboratorios</h1>
+        <h1>Laboratorios</h1>
 
-      <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
 
-        <div>
+          <div>
 
-          <input
-            type="text"
-            placeholder="Nombre"
-            value={nombre}
-            onChange={(e) =>
-              setNombre(e.target.value)
-            }
-          />
+            <input
+              type="text"
+              placeholder="Nombre"
+              value={nombre}
+              onChange={(e) =>
+                setNombre(e.target.value)
+              }
+            />
 
-        </div>
+          </div>
 
-        <div>
+          <div>
 
-          <input
-            type="number"
-            placeholder="Capacidad"
-            value={capacidad}
-            onChange={(e) =>
-              setCapacidad(
-                Number(e.target.value)
-              )
-            }
-          />
+            <input
+              type="number"
+              placeholder="Capacidad"
+              value={capacidad}
+              onChange={(e) =>
+                setCapacidad(
+                  Number(e.target.value)
+                )
+              }
+            />
 
-        </div>
+          </div>
 
-        <div>
+          <div>
 
-          <input
-            type="text"
-            placeholder="Edificio"
-            value={edificio}
-            onChange={(e) =>
-              setEdificio(e.target.value)
-            }
-          />
+            <input
+              type="text"
+              placeholder="Edificio"
+              value={edificio}
+              onChange={(e) =>
+                setEdificio(e.target.value)
+              }
+            />
 
-        </div>
+          </div>
 
-        <button type="submit">
-          Crear laboratorio
-        </button>
+          <button type="submit">
+            Crear laboratorio
+          </button>
 
-      </form>      
+        </form>      
 
-      {laboratorios.length === 0 ? (
+        {laboratorios.length === 0 ? (
 
-        <p>
-          No hay laboratorios cargados
-        </p>
+          <p>
+            No hay laboratorios cargados
+          </p>
 
-      ) : (
+        ) : (
 
-        laboratorios.map(
-          (lab: Laboratorio) => (
+          laboratorios.map(
+            (lab: Laboratorio) => (
 
-            <div
-              key={lab.id}
-              style={{
-                border:
-                  "1px solid gray",
+              <div
+                key={lab.id}
+                style={{
+                  border:
+                    "1px solid gray",
 
-                padding: "1rem",
+                  padding: "1rem",
 
-                marginBottom: "1rem",
+                  marginBottom: "1rem",
 
-                borderRadius: "8px",
-              }}
-            >
+                  borderRadius: "8px",
+                }}
+              >
 
-              <h3>
-                {lab.nombre}
-              </h3>
+                <h3>
+                  {lab.nombre}
+                </h3>
 
-              <p>
-                <strong>
-                  Capacidad:
-                </strong>{" "}
-                {lab.capacidad}
-              </p>
+                <p>
+                  <strong>
+                    Capacidad:
+                  </strong>{" "}
+                  {lab.capacidad}
+                </p>
 
-              <p>
-                <strong>
-                  Edificio:
-                </strong>{" "}
-                {lab.edificio}
-              </p>
+                <p>
+                  <strong>
+                    Edificio:
+                  </strong>{" "}
+                  {lab.edificio}
+                </p>
 
-            </div>
+              </div>
+            )
           )
-        )
-      )}
-    </div>
+        )}
+      </div>
+    </AppLayout>
   );
 }
 

@@ -1,0 +1,22 @@
+.navbar {
+  width: calc(100% - 240px) !important;
+
+  margin-left: 240px !important;
+
+  background-color: white !important;
+
+  color: #0B1739 !important;
+
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.08) !important;
+}
+
+.navbar-title {
+  font-weight: 700 !important;
+
+  font-size: 22px !important;
+}
+
+.navbar-spacer {
+  flex-grow: 1;
+}

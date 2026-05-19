@@ -5,6 +5,7 @@ import PedidoTable from '../components/pedidos/PedidoTable';
 import { getPedidos, createPedido, updatePedido } from '../api/pedidos';
 import { getLaboratorios } from '../api/laboratorios';
 import type { Pedido } from '../types/pedido';
+import  AppLayout  from '../components/layout/AppLayout';
 
 export default function Pedidos() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
@@ -101,19 +102,21 @@ export default function Pedidos() {
   };
 
   return (
-    <div>
-      <h1>Pedidos</h1>
+    <AppLayout>
+      <div>
+        <h1>Pedidos</h1>
 
-      <PedidoForm
-        laboratorios={laboratorios}
-        onSubmitPedido={agregarPedido}
-      />
+        <PedidoForm
+          laboratorios={laboratorios}
+          onSubmitPedido={agregarPedido}
+          />
 
-      <PedidoTable
-        pedidos={pedidos}
-        aceptarPedido={aceptarPedido}
-        rechazarPedido={rechazarPedido}
-      />
-    </div>
+        <PedidoTable
+          pedidos={pedidos}
+          aceptarPedido={aceptarPedido}
+          rechazarPedido={rechazarPedido}
+          />
+      </div>
+    </AppLayout>
   );
 }

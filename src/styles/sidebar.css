@@ -1,0 +1,55 @@
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+}
+
+.sidebar .MuiDrawer-paper {
+  width: 240px;
+  box-sizing: border-box;
+  background-color: #0B1739;
+  color: white;
+}
+
+.sidebar-logo {
+  font-weight: 700;
+}
+
+.sidebar-menu-item {
+  margin-left: 8px;
+  margin-right: 8px;
+  border-radius: 12px;
+}
+
+.sidebar-menu-item.Mui-selected {
+  background-color: #1E2A5A;
+}
+
+.sidebar-menu-item.Mui-selected:hover {
+  background-color: #1E2A5A;
+}
+
+.sidebar-user {
+  padding: 16px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-user-name {
+  font-weight: 700;
+}
+
+.sidebar-user-email {
+  color: #CBD5E1;
+  margin-bottom: 16px;
+}
+
+.sidebar-logout-btn {
+  background-color: #1E2A5A !important;
+}
+
+.sidebar-logout-btn:hover {
+  background-color: #2B3B75 !important;
+}
+
+
+
+
