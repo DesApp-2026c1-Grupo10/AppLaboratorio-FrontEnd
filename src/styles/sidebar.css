@@ -43,11 +43,17 @@
 }
 
 .sidebar-logout-btn {
-  background-color: #1E2A5A !important;
+  /*background-color: #1E2A5A !important;*/
+  border-color: white !important;
+  color: white !important;
+  border-radius: 8px !important;
+  text-transform: none !important;
 }
 
 .sidebar-logout-btn:hover {
-  background-color: #2B3B75 !important;
+  /*background-color: #2B3B75 !important;*/
+  background-color: white !important;
+  color: #0B1739 !important;
 }
 
 

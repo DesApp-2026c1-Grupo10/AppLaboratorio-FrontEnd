@@ -156,7 +156,7 @@ export default function Sidebar() {
 
           <Button
             fullWidth
-            variant="contained"
+            variant="outlined" //antes "contained"
 
             className="sidebar-logout-btn"
 
