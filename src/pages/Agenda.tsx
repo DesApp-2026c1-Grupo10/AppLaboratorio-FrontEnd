@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Box, Typography, Table, TableBody, TableCell, TableHead, TableRow, Chip } from '@mui/material';
 import AgendaDiaria from '../components/agenda/AgendaDiaria';
+import AppLayout from '../components/layout/AppLayout';
 import { getPedidos } from '../api/pedidos';
 import type { Pedido } from '../types/pedido';
 
@@ -10,23 +12,15 @@ export default function Agenda() {
     async function loadPedidos() {
       try {
         const data = await getPedidos();
-        
-        // Transformamos la data de la DB al formato que espera el componente
         const pedidosFormateados = data.map((p: any) => ({
           id: p.id,
-          // Combinamos horaInicio y horaFin para crear 'horario'
           horario: `${p.horaInicio} - ${p.horaFin}`,
-          // Sacamos el nombre del laboratorio del objeto relacionado
           laboratorioNombre: p.Laboratorio?.nombre || 'Sin nombre',
-          // Mapeamos cantidadAlumnos a alumnos
           alumnos: p.cantidadAlumnos,
           estado: p.estado,
           fecha: p.fecha
         }));
-
-        // Opcional: filtrar solo los aprobados para la agenda
         const aprobados = pedidosFormateados.filter((p: any) => p.estado === 'Aprobado');
-        
         setPedidos(aprobados);
       } catch (error) {
         console.error("Error al cargar agenda:", error);
@@ -36,12 +30,18 @@ export default function Agenda() {
   }, []);
 
   return (
-    <div style={{ padding: '20px' }}>
-      {pedidos.length === 0 ? (
-        <p>No hay clases aprobadas para mostrar.</p>
-      ) : (
-        <AgendaDiaria pedidos={pedidos} />
-      )}
-    </div>
+    <AppLayout>
+      <Box className="inventario-page">
+        <Box className="inventario-header">
+          <Typography variant="h4">Agenda de Laboratorios</Typography>
+          <Typography variant="body1" className="inventario-subtitle">Clases aprobadas y programadas</Typography>
+        </Box>
+        {pedidos.length === 0 ? (
+          <Typography color="text.secondary">No hay clases aprobadas para mostrar.</Typography>
+        ) : (
+          <AgendaDiaria pedidos={pedidos} />
+        )}
+      </Box>
+    </AppLayout>
   );
 }

@@ -166,6 +166,28 @@ export default function Dashboard() {
             <div className="stat-card-header">
 
               <span className="stat-icon">
+                ✅
+              </span>
+
+            </div>
+
+            <h2>
+              Finalizados
+            </h2>
+
+            <p>
+              {pedidos.filter((pedido: any) => pedido.estado === "Finalizado").length}
+            </p>
+
+          </div>
+
+          {/* CARD */}
+
+          <div className="stat-card">
+
+            <div className="stat-card-header">
+
+              <span className="stat-icon">
                 ⚠️
               </span>
 
@@ -175,7 +197,7 @@ export default function Dashboard() {
               Alertas de Stock
             </h2>
 
-            <p>3</p>
+            <p>{/* stock bajo */}0</p>
 
           </div>
 
@@ -237,7 +259,7 @@ export default function Dashboard() {
                     <div
                       className={`status ${
                         pedido.estado ===
-                        "Aceptado"
+                        "Aprobado"
                           ? "status-active"
                           : "status-next"
                       }`}

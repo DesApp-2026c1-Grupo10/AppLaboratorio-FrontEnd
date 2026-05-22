@@ -1,0 +1,8 @@
+/* Estilos adicionales para tablas del sistema */
+.table-filters {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}

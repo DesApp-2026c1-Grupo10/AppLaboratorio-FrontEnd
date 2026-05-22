@@ -56,6 +56,17 @@
   color: #0B1739 !important;
 }
 
+.sidebar-sub-item {
+  margin-left: 8px;
+  margin-right: 8px;
+  border-radius: 12px;
+  padding-left: 48px !important;
+}
 
+.sidebar-sub-item.Mui-selected {
+  background-color: #1E2A5A;
+}
 
-
+.sidebar-sub-item.Mui-selected:hover {
+  background-color: #1E2A5A;
+}
