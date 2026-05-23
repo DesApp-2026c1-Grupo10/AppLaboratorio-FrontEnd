@@ -1,49 +1,64 @@
 import {
-  Drawer, List, ListItemButton, ListItemIcon, ListItemText,
-  Toolbar, Typography, Box, Button, Collapse,
+  Drawer,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Toolbar,
+  Typography,
+  Box,
+  Button,
 } from "@mui/material";
-import {
-  Dashboard as DashboardIcon, Science as ScienceIcon,
-  Inventory as InventoryIcon, EventNote as EventNoteIcon,
-  ExpandLess, ExpandMore, Biotech as BiotechIcon,
-  PrecisionManufacturing as PrecisionManufacturingIcon,
-  SwapHoriz as SwapHorizIcon,
-} from "@mui/icons-material";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+
 import "../../styles/sidebar.css";
 
-const topItems = [
-  { text: "Dashboard", path: "/", icon: <DashboardIcon /> },
-  { text: "Laboratorios", path: "/laboratorios", icon: <ScienceIcon /> },
-  { text: "Pedidos", path: "/pedidos", icon: <EventNoteIcon /> },
-];
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import ScienceIcon from "@mui/icons-material/Science";
+import InventoryIcon from "@mui/icons-material/Inventory";
+import EventNoteIcon from "@mui/icons-material/EventNote";
 
-const invSubItems = [
-  { text: "General", path: "/inventario", icon: <InventoryIcon /> },
-  { text: "Materiales", path: "/materiales", icon: <BiotechIcon /> },
-  { text: "Reactivos", path: "/reactivos", icon: <ScienceIcon /> },
-  { text: "Equipos", path: "/equipos", icon: <PrecisionManufacturingIcon /> },
-  { text: "Movimientos", path: "/movimientos", icon: <SwapHorizIcon /> },
+import {
+  Link,
+  useLocation,
+} from "react-router-dom";
+
+const menuItems = [
+  {
+    text: "Dashboard",
+    path: "/",
+    icon: <DashboardIcon />,
+  },
+  {
+    text: "Laboratorios",
+    path: "/laboratorios",
+    icon: <ScienceIcon />,
+  },
+  {
+    text: "Pedidos",
+    path: "/pedidos",
+    icon: <EventNoteIcon />,
+  },
+  {
+    text: "Inventario",
+    path: "/inventario",
+    icon: <InventoryIcon />,
+  },
 ];
 
 export default function Sidebar() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const [invOpen, setInvOpen] = useState(
-    location.pathname.startsWith("/inventario") ||
-    location.pathname === "/materiales" ||
-    location.pathname === "/reactivos" ||
-    location.pathname === "/equipos" ||
-    location.pathname === "/movimientos"
-  );
 
-  const user = JSON.parse(localStorage.getItem("usuario") || "{}");
+  // Buscamos con las dos posibles claves por si hubo una mezcla de nombres
+  const userString = localStorage.getItem("user") || localStorage.getItem("usuario") || "{}";
+  const user = JSON.parse(userString);
 
   function handleLogout() {
-    localStorage.removeItem("usuario");
+    // Borramos ambas claves para asegurarnos de matar la sesión al 100%
     localStorage.removeItem("user");
-    navigate("/login");
+    localStorage.removeItem("usuario");
+
+    // Forzamos la recarga de la página para que el Router y React limpien la memoria
+    window.location.href = "/login";
   }
 
   return (
@@ -54,9 +69,17 @@ export default function Sidebar() {
         </Typography>
       </Toolbar>
 
-      <Box sx={{ overflow: "auto", display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
+      <Box
+        sx={{
+          overflow: "auto",
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          justifyContent: "space-between",
+        }}
+      >
         <List>
-          {topItems.map((item) => (
+          {menuItems.map((item) => (
             <ListItemButton
               key={item.path}
               component={Link}
@@ -64,43 +87,27 @@ export default function Sidebar() {
               selected={location.pathname === item.path}
               className="sidebar-menu-item"
             >
-              <ListItemIcon sx={{ color: "white" }}>{item.icon}</ListItemIcon>
+              <ListItemIcon sx={{ color: "white" }}>
+                {item.icon}
+              </ListItemIcon>
               <ListItemText primary={item.text} />
             </ListItemButton>
           ))}
-
-          <ListItemButton onClick={() => setInvOpen(!invOpen)} className="sidebar-menu-item">
-            <ListItemIcon sx={{ color: "white" }}><InventoryIcon /></ListItemIcon>
-            <ListItemText primary="Inventario" />
-            {invOpen ? <ExpandLess sx={{ color: "white" }} /> : <ExpandMore sx={{ color: "white" }} />}
-          </ListItemButton>
-
-          <Collapse in={invOpen} timeout="auto" unmountOnExit>
-            <List disablePadding>
-              {invSubItems.map((item) => (
-                <ListItemButton
-                  key={item.path}
-                  component={Link}
-                  to={item.path}
-                  selected={location.pathname === item.path}
-                  className="sidebar-sub-item"
-                >
-                  <ListItemIcon sx={{ color: "rgba(255,255,255,0.7)", minWidth: 36 }}>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              ))}
-            </List>
-          </Collapse>
         </List>
 
         <Box className="sidebar-user">
           <Typography component="div" className="sidebar-user-name">
-            {user.nombre || "Usuario"}
+            {user.nombre}
           </Typography>
           <Typography component="div" className="sidebar-user-email">
-            {user.email || ""}
+            {user.email}
           </Typography>
-          <Button fullWidth variant="outlined" className="sidebar-logout-btn" onClick={handleLogout}>
+          <Button
+            fullWidth
+            variant="outlined"
+            className="sidebar-logout-btn"
+            onClick={handleLogout}
+          >
             Cerrar sesión
           </Button>
         </Box>
