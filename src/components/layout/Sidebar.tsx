@@ -16,6 +16,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import ScienceIcon from "@mui/icons-material/Science";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import EventNoteIcon from "@mui/icons-material/EventNote";
+import BarChartIcon from "@mui/icons-material/BarChart";
 
 import {
   Link,
@@ -23,26 +24,11 @@ import {
 } from "react-router-dom";
 
 const menuItems = [
-  {
-    text: "Dashboard",
-    path: "/",
-    icon: <DashboardIcon />,
-  },
-  {
-    text: "Laboratorios",
-    path: "/laboratorios",
-    icon: <ScienceIcon />,
-  },
-  {
-    text: "Pedidos",
-    path: "/pedidos",
-    icon: <EventNoteIcon />,
-  },
-  {
-    text: "Inventario",
-    path: "/inventario",
-    icon: <InventoryIcon />,
-  },
+  { text: "Dashboard", path: "/", icon: <DashboardIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
+  { text: "Laboratorios", path: "/laboratorios", icon: <ScienceIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
+  { text: "Pedidos", path: "/pedidos", icon: <EventNoteIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
+  { text: "Inventario", path: "/inventario", icon: <InventoryIcon />, roles: ['Desarrollador'] },
+  { text: "Estadísticas", path: "/estadisticas", icon: <BarChartIcon />, roles: ['Desarrollador'] },
 ];
 
 export default function Sidebar() {
@@ -79,7 +65,7 @@ export default function Sidebar() {
         }}
       >
         <List>
-          {menuItems.map((item) => (
+          {menuItems.filter((item) => item.roles.includes(user.rol)).map((item) => (
             <ListItemButton
               key={item.path}
               component={Link}
@@ -97,10 +83,13 @@ export default function Sidebar() {
 
         <Box className="sidebar-user">
           <Typography component="div" className="sidebar-user-name">
-            {user.nombre}
+            {user.nombre} {user.apellido || ''}
           </Typography>
           <Typography component="div" className="sidebar-user-email">
             {user.email}
+          </Typography>
+          <Typography component="div" className="sidebar-user-role">
+            {user.rol || 'Usuario'}
           </Typography>
           <Button
             fullWidth

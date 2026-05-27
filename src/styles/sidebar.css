@@ -39,7 +39,15 @@
 
 .sidebar-user-email {
   color: #CBD5E1;
+  font-size: 13px;
+}
+
+.sidebar-user-role {
+  color: #94A3B8;
+  font-size: 12px;
   margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .sidebar-logout-btn {
@@ -69,4 +77,9 @@
 
 .sidebar-sub-item.Mui-selected:hover {
   background-color: #1E2A5A;
+}
+
+@media (max-width: 768px) {
+  .sidebar { width: 200px; }
+  .sidebar .MuiDrawer-paper { width: 200px; }
 }

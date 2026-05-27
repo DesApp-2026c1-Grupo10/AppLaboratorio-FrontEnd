@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
   Box, Button, FormControl, InputLabel, MenuItem, Select, TextField,
-  Chip, Typography, Autocomplete, Stack, IconButton, Alert,
+  Chip, Typography, Autocomplete, Stack, IconButton, Alert, Slider, Tooltip,
 } from '@mui/material';
-import { Delete as DeleteIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { getMateriales } from '../../api/materiales';
 import { getReactivos } from '../../api/reactivos';
 import { getEquipos } from '../../api/equipos';
@@ -12,6 +12,7 @@ import type { Pedido } from '../../types/pedido';
 interface Props {
   onSubmitPedido: (data: any) => Promise<any>;
   laboratorios: any[];
+  onRefreshLabs?: () => void;
 }
 
 interface ItemSeleccionado {
@@ -19,13 +20,14 @@ interface ItemSeleccionado {
   name: string;
   cantidad: number;
   stock: number;
+  unidadMedida?: string;
 }
 
 const initialForm = {
   fecha: '', horaInicio: '', horaFin: '', laboratorioId: '', cantidadAlumnos: 1, descripcion: '',
 };
 
-export default function PedidoForm({ onSubmitPedido, laboratorios }: Props) {
+export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs }: Props) {
   const [materiales, setMateriales] = useState<any[]>([]);
   const [reactivos, setReactivos] = useState<any[]>([]);
   const [equipos, setEquipos] = useState<any[]>([]);
@@ -75,7 +77,7 @@ export default function PedidoForm({ onSubmitPedido, laboratorios }: Props) {
       });
       resetForm();
     } catch (err: any) {
-      setError(err.message || 'Error al crear el pedido');
+      // El error ya se muestra via Snackbar en el padre
     } finally {
       setSubmitting(false);
     }
@@ -94,14 +96,21 @@ export default function PedidoForm({ onSubmitPedido, laboratorios }: Props) {
         <TextField label="Cant. Alumnos" type="number" value={form.cantidadAlumnos} onChange={(e) => setForm({ ...form, cantidadAlumnos: Number(e.target.value) })} required sx={{ minWidth: 140 }} inputProps={{ min: 1 }} />
       </Stack>
 
-      <FormControl fullWidth required>
-        <InputLabel>Laboratorio</InputLabel>
-        <Select value={form.laboratorioId} label="Laboratorio" onChange={(e) => setForm({ ...form, laboratorioId: e.target.value })}>
-          {laboratorios.map((lab) => <MenuItem key={lab.id} value={lab.id}>{lab.nombre} (Cap: {lab.capacidad})</MenuItem>)}
-        </Select>
-      </FormControl>
-
-      <TextField label="Descripción (opcional)" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} multiline rows={2} fullWidth />
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+        <FormControl fullWidth required>
+          <InputLabel>Laboratorio</InputLabel>
+          <Select value={form.laboratorioId} label="Laboratorio" onChange={(e) => setForm({ ...form, laboratorioId: e.target.value })}>
+            {laboratorios.map((lab) => <MenuItem key={lab.id} value={lab.id}>{lab.nombre} (Cap: {lab.capacidad})</MenuItem>)}
+          </Select>
+        </FormControl>
+        {onRefreshLabs && (
+          <Tooltip title="Recargar laboratorios">
+            <IconButton onClick={onRefreshLabs} size="small" sx={{ mb: 0.5 }}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Box>
 
       {/* Materiales */}
       <Box>
@@ -135,20 +144,39 @@ export default function PedidoForm({ onSubmitPedido, laboratorios }: Props) {
           getOptionLabel={(o) => `${o.name} (Stock: ${o.stock} ${o.unidadMedida || ''})`}
           onChange={(_, v) => {
             if (v) {
-              setSelectedReactivos([...selectedReactivos, { id: v.id, name: v.name, cantidad: 1, stock: v.stock }]);
+              setSelectedReactivos([...selectedReactivos, { id: v.id, name: v.name, cantidad: 1, stock: v.stock, unidadMedida: v.unidadMedida }]);
             }
           }}
           renderInput={(params) => <TextField {...params} size="small" placeholder="Agregar reactivo..." />}
           fullWidth
         />
-        {selectedReactivos.map((r) => (
-          <Box key={r.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-            <Chip label={r.name} color={r.cantidad > r.stock ? 'error' : 'secondary'} size="small" />
-            <TextField type="number" size="small" value={r.cantidad} onChange={(e) => setSelectedReactivos(selectedReactivos.map((sr) => sr.id === r.id ? { ...sr, cantidad: Number(e.target.value) } : sr))} inputProps={{ min: 1, max: r.stock }} sx={{ width: 80 }} />
-            <Typography variant="caption" color="text.secondary">disp: {r.stock}</Typography>
-            <IconButton size="small" onClick={() => setSelectedReactivos(selectedReactivos.filter((sr) => sr.id !== r.id))} color="error"><DeleteIcon fontSize="small" /></IconButton>
-          </Box>
-        ))}
+        {selectedReactivos.map((r) => {
+          const esLiquido = r.unidadMedida?.toLowerCase().includes('litro') || r.unidadMedida?.toLowerCase().includes('l') || r.unidadMedida === 'ml';
+          return (
+            <Box key={r.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+              <Chip label={r.name} color={r.cantidad > r.stock ? 'error' : 'secondary'} size="small" />
+              {esLiquido ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: 200 }}>
+                  <Slider
+                    value={r.cantidad}
+                    onChange={(_, val) => setSelectedReactivos(selectedReactivos.map((sr) => sr.id === r.id ? { ...sr, cantidad: val as number } : sr))}
+                    min={0}
+                    max={r.stock || 10}
+                    step={1}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={(v) => `${v} ${r.unidadMedida || 'L'}`}
+                    sx={{ flex: 1 }}
+                  />
+                  <Typography variant="caption" sx={{ minWidth: 60 }}>{r.cantidad} {r.unidadMedida || 'L'}</Typography>
+                </Box>
+              ) : (
+                <TextField type="number" size="small" value={r.cantidad} onChange={(e) => setSelectedReactivos(selectedReactivos.map((sr) => sr.id === r.id ? { ...sr, cantidad: Number(e.target.value) } : sr))} inputProps={{ min: 1, max: r.stock }} sx={{ width: 80 }} />
+              )}
+              <Typography variant="caption" color="text.secondary">disp: {r.stock}</Typography>
+              <IconButton size="small" onClick={() => setSelectedReactivos(selectedReactivos.filter((sr) => sr.id !== r.id))} color="error"><DeleteIcon fontSize="small" /></IconButton>
+            </Box>
+          );
+        })}
       </Box>
 
       {/* Equipos */}

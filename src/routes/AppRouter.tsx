@@ -10,11 +10,18 @@ import Dashboard from '../pages/Dashboard';
 import Laboratorios from '../pages/Laboratorios';
 import Pedidos from '../pages/Pedidos';
 import Agenda from '../pages/Agenda';
+import Estadisticas from '../pages/Estadisticas';
+
+const adminRoutes = ['/inventario', '/materiales', '/reactivos', '/equipos', '/movimientos', '/estadisticas'];
 
 const RutaProtegida = ({ children }: { children: JSX.Element }) => {
-  const usuarioGuardado = localStorage.getItem('usuario');
-  if (!usuarioGuardado) {
+  const usuarioStorage = localStorage.getItem('usuario') || localStorage.getItem('user');
+  if (!usuarioStorage) {
     return <Navigate to="/login" replace />;
+  }
+  const usuario = JSON.parse(usuarioStorage);
+  if (adminRoutes.includes(window.location.pathname) && usuario.rol !== 'Desarrollador') {
+    return <Navigate to="/" replace />;
   }
   return children;
 };
@@ -36,6 +43,7 @@ export default function AppRouter() {
         <Route path="/reactivos" element={<RutaProtegida><Reactivos /></RutaProtegida>} />
         <Route path="/equipos" element={<RutaProtegida><Equipos /></RutaProtegida>} />
         <Route path="/movimientos" element={<RutaProtegida><Movimientos /></RutaProtegida>} />
+        <Route path="/estadisticas" element={<RutaProtegida><Estadisticas /></RutaProtegida>} />
       </Routes>
     </BrowserRouter>
   );

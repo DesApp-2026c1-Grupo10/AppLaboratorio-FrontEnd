@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { Snackbar, Alert, Box, Typography } from '@mui/material';
 
 import PedidoForm from '../components/pedidos/PedidoForm';
 import PedidoTable from '../components/pedidos/PedidoTable';
-import { getPedidos, createPedido, updatePedido } from '../api/pedidos';
+import FinalizarDialog from '../components/pedidos/FinalizarDialog';
+import { getPedidos, createPedido, updatePedido, finalizarPedido, getHistorialPedido } from '../api/pedidos';
 import { getLaboratorios } from '../api/laboratorios';
 import type { Pedido } from '../types/pedido';
 import AppLayout from '../components/layout/AppLayout';
@@ -11,6 +13,13 @@ import "../styles/pedidos.css";
 export default function Pedidos() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [laboratorios, setLaboratorios] = useState([]);
+  const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [pedidoToFinalize, setPedidoToFinalize] = useState<Pedido | null>(null);
+
+  const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
+  const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
+  const esAdmin = usuarioLogueado?.rol === 'Desarrollador';
 
   useEffect(() => {
     loadData();
@@ -18,133 +27,139 @@ export default function Pedidos() {
 
   async function loadData() {
     try {
-      const pedidosData = await getPedidos();
-      const laboratoriosData = await getLaboratorios();
-
+      const [pedidosData, laboratoriosData] = await Promise.all([getPedidos(), getLaboratorios()]);
       setPedidos(pedidosData);
       setLaboratorios(laboratoriosData);
     } catch (error) {
       console.error(error);
+    } finally {
+      setLoading(false);
     }
   }
 
+  const refreshLaboratorios = async () => {
+    try {
+      const data = await getLaboratorios();
+      setLaboratorios(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const agregarPedido = async (pedido: Pedido) => {
     try {
-      // 1. Leemos el usuario que está guardado en el navegador
-      const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
-      
-      // 2. Si por algún milagro no hay usuario (aunque la ruta lo protege), cortamos todo
-      if (!usuarioStorage) {
-        alert("Sesión expirada. Por favor volvé a iniciar sesión.");
+      if (!usuarioLogueado) {
+        setSnackbar({ msg: 'Sesión expirada. Por favor volvé a iniciar sesión.', severity: 'error' });
         return;
       }
-
-      // 3. Convertimos el texto de localStorage de nuevo a un objeto de JavaScript
-      const usuarioLogueado = JSON.parse(usuarioStorage);
-
-      // 4. Usamos SU verdadero ID, chau hardcodeo 😎
-      const pedidoConUsuario = { 
-        ...pedido, 
-        usuarioId: usuarioLogueado.id 
-      };
-
+      const pedidoConUsuario = { ...pedido, usuarioId: usuarioLogueado.id };
       const nuevoPedido = await createPedido(pedidoConUsuario);
-
       setPedidos([...pedidos, nuevoPedido]);
-      alert("¡Pedido creado con éxito!");
-
+      setSnackbar({ msg: '¡Pedido creado con éxito!', severity: 'success' });
     } catch (error: any) {
-      console.error(error);
-      alert("No se pudo crear: " + error.message);
+      setSnackbar({ msg: 'No se pudo crear: ' + error.message, severity: 'error' });
+      throw error;
     }
   };
 
   const aceptarPedido = async (id: number) => {
     try {
       const pedidoActualizado = await updatePedido(id, { estado: "Aprobado" });
-
-      setPedidos((prev) =>
-        prev.map((pedido) =>
-          pedido.id === id
-            ? { ...pedido, ...pedidoActualizado } // ¡LA MAGIA!: Mezclamos el viejo (con el laboratorio) y el nuevo (con el estado)
-            : pedido
-        )
-      );
+      setPedidos((prev) => prev.map((p) => p.id === id ? { ...p, ...pedidoActualizado } : p));
+      setSnackbar({ msg: 'Pedido aprobado correctamente', severity: 'success' });
     } catch (error) {
-      console.error(error);
+      setSnackbar({ msg: 'Error al aprobar pedido', severity: 'error' });
     }
   };
 
   const rechazarPedido = async (id: number) => {
     try {
       const pedidoActualizado = await updatePedido(id, { estado: "Rechazado" });
-
-      setPedidos((prev) =>
-        prev.map((pedido) =>
-          pedido.id === id
-            ? { ...pedido, ...pedidoActualizado } // ¡LA MAGIA!: Hacemos lo mismo acá
-            : pedido
-        )
-      );
+      setPedidos((prev) => prev.map((p) => p.id === id ? { ...p, ...pedidoActualizado } : p));
+      setSnackbar({ msg: 'Pedido rechazado', severity: 'success' });
     } catch (error) {
-      console.error(error);
+      setSnackbar({ msg: 'Error al rechazar pedido', severity: 'error' });
     }
+  };
+
+  const handleFinalizarClick = (pedido: Pedido) => {
+    setPedidoToFinalize(pedido);
+  };
+
+  const handleFinalizarConfirm = async (data: {
+    materiales: { id: number; cantidad: number }[];
+    reactivos: { id: number; cantidad: number }[];
+    equipos: { id: number; estado: string }[];
+  }) => {
+    if (!usuarioLogueado || !pedidoToFinalize) return;
+    const updated = await finalizarPedido(pedidoToFinalize.id, {
+      usuarioId: usuarioLogueado.id,
+      ...data,
+    });
+    setPedidos((prev) => prev.map((p) => p.id === pedidoToFinalize.id ? { ...p, ...updated } : p));
+    setPedidoToFinalize(null);
+    setSnackbar({ msg: 'Clase finalizada. Stock y equipos actualizados.', severity: 'success' });
   };
 
   return (
     <AppLayout>
       <div className="pedidos-page">
-        {/* HEADER */}
         <div className="pedidos-header">
           <h1 className="pedidos-title">Gestión de Pedidos</h1>
-          <p className="pedidos-subtitle">
-            Administrá reservas y solicitudes de laboratorios
-          </p>
+          <p className="pedidos-subtitle">Administrá reservas y solicitudes de laboratorios</p>
         </div>
 
-        {/* STATS */}
         <div className="pedidos-stats">
           <div className="pedidos-stat-card">
             <h2 className="pedidos-stat-title">Pedidos Totales</h2>
             <p className="pedidos-stat-number">{pedidos.length}</p>
           </div>
-
           <div className="pedidos-stat-card">
             <h2 className="pedidos-stat-title">Pendientes</h2>
-            <p className="pedidos-stat-number">
-              {pedidos.filter((pedido) => pedido.estado === "Pendiente").length}
-            </p>
+            <p className="pedidos-stat-number">{pedidos.filter((p) => p.estado === 'Pendiente').length}</p>
           </div>
-
           <div className="pedidos-stat-card">
             <h2 className="pedidos-stat-title">Aprobados</h2>
-            <p className="pedidos-stat-number">
-              {pedidos.filter((pedido) => pedido.estado === "Aprobado").length}
-            </p>
+            <p className="pedidos-stat-number">{pedidos.filter((p) => p.estado === 'Aprobado').length}</p>
           </div>
-
           <div className="pedidos-stat-card">
             <h2 className="pedidos-stat-title">Rechazados</h2>
-            <p className="pedidos-stat-number">
-              {pedidos.filter((pedido) => pedido.estado === "Rechazado").length}
-            </p>
+            <p className="pedidos-stat-number">{pedidos.filter((p) => p.estado === 'Rechazado').length}</p>
           </div>
         </div>
 
-        {/* CONTENT */}
         <div className="pedidos-content">
-          <PedidoForm
-            laboratorios={laboratorios}
-            onSubmitPedido={agregarPedido}
-          />
-          <br />
-          <PedidoTable
-            pedidos={pedidos}
-            aceptarPedido={aceptarPedido}
-            rechazarPedido={rechazarPedido}
-          />
+          {loading ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}><Typography>Cargando...</Typography></Box>
+          ) : (
+            <>
+              <PedidoForm laboratorios={laboratorios} onSubmitPedido={agregarPedido} onRefreshLabs={refreshLaboratorios} />
+              <br />
+              <PedidoTable
+                pedidos={pedidos}
+                aceptarPedido={aceptarPedido}
+                rechazarPedido={rechazarPedido}
+                finalizarPedido={handleFinalizarClick}
+                esAdmin={esAdmin}
+              />
+            </>
+          )}
         </div>
       </div>
+
+      {snackbar && (
+        <Snackbar open autoHideDuration={3000} onClose={() => setSnackbar(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+          <Alert severity={snackbar.severity} onClose={() => setSnackbar(null)}>{snackbar.msg}</Alert>
+        </Snackbar>
+      )}
+
+      <FinalizarDialog
+        key={pedidoToFinalize?.id || 'none'}
+        open={!!pedidoToFinalize}
+        pedido={pedidoToFinalize}
+        onConfirm={handleFinalizarConfirm}
+        onCancel={() => setPedidoToFinalize(null)}
+      />
     </AppLayout>
   );
 }

@@ -1,26 +1,26 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUsuario } from "../api/usuarios";
-import { Box, Paper, Typography, TextField, Button, } from "@mui/material";
+import { Box, Paper, Typography, TextField, Button, Snackbar, Alert } from "@mui/material";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      // 1. Llamamos a la API
       const userData = await loginUsuario(email, password);
-      
-      // 2. Guardamos el usuario en el navegador (localStorage)
       localStorage.setItem("usuario", JSON.stringify(userData));
-      
-      // 3. Lo mandamos al Dashboard
       navigate("/");
     } catch (error: any) {
-      alert(error.message);
+      setSnackbar({ msg: error.message || 'Error al iniciar sesión', severity: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -96,6 +96,7 @@ export default function Login() {
             variant="contained"
             fullWidth
             size="large"
+            disabled={loading}
             sx={{
               mt: 1,
               py: 1.5,
@@ -106,10 +107,16 @@ export default function Login() {
               "&:hover": { bgcolor: "#1E2A5A" },
             }}
           >
-            Entrar
+            {loading ? 'Ingresando...' : 'Entrar'}
           </Button>
         </Box>
       </Paper>
+
+      {snackbar && (
+        <Snackbar open autoHideDuration={3000} onClose={() => setSnackbar(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+          <Alert severity={snackbar.severity} onClose={() => setSnackbar(null)}>{snackbar.msg}</Alert>
+        </Snackbar>
+      )}
     </Box>
   );
 }

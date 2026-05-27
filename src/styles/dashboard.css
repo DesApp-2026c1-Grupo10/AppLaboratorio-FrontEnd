@@ -154,3 +154,15 @@
 
   color: #1D4ED8;
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-title { font-size: 28px; }
+  .dashboard-subtitle { font-size: 16px; margin-bottom: 24px; }
+  .stats-grid { gap: 16px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .stat-card { padding: 16px; }
+  .stat-card p { font-size: 24px; }
+  .stat-card h2 { font-size: 16px; }
+  .timeline-title { font-size: 22px; }
+  .timeline-item { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
