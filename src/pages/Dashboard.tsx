@@ -20,7 +20,8 @@ export default function Dashboard() {
   const [equiposMantenimiento, setEquiposMantenimiento] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const hoy = new Date().toISOString().split("T")[0];
+  const d = new Date();
+  const hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const pedidosHoy = pedidos.filter((p: any) => p.fecha === hoy);
   const pendientes = pedidos.filter((p: any) => p.estado === "Pendiente");
   const finalizados = pedidos.filter((p: any) => p.estado === "Finalizado");

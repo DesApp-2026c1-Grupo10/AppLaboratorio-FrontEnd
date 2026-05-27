@@ -75,7 +75,7 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
           <TableBody>
             {pedidos.map((pedido) => (
               <TableRow key={pedido.id}>
-                <TableCell>{pedido.fecha ? new Date(pedido.fecha).toLocaleDateString('es-AR') : '-'}</TableCell>
+                <TableCell>{pedido.fecha ? pedido.fecha.split('-').reverse().join('/') : '-'}</TableCell>
                 <TableCell>{pedido.horaInicio} - {pedido.horaFin}</TableCell>
                 <TableCell>{pedido.Laboratorio?.nombre}</TableCell>
                 <TableCell>{pedido.cantidadAlumnos}</TableCell>

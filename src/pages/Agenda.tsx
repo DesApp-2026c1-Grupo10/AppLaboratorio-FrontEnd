@@ -5,6 +5,13 @@ import { getPedidos } from '../api/pedidos';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
+function localDateStr(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getWeekDays() {
   const hoy = new Date();
   const diaSemana = hoy.getDay();
@@ -14,7 +21,7 @@ function getWeekDays() {
   return DIAS.map((_, i) => {
     const d = new Date(lunes);
     d.setDate(lunes.getDate() + i);
-    return d.toISOString().split('T')[0];
+    return localDateStr(d);
   });
 }
 
@@ -46,7 +53,7 @@ export default function Agenda() {
     load();
   }, []);
 
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = localDateStr(new Date());
 
   return (
     <AppLayout>
