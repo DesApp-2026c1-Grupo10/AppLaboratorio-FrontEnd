@@ -3,12 +3,18 @@ import {
   Toolbar,
   Typography,
   Box,
+  IconButton,
 } from "@mui/material";
+
+import MenuIcon from "@mui/icons-material/Menu";
 
 import "../../styles/navbar.css";
 
-export default function Navbar() {
+interface Props {
+  onMenuClick: () => void;
+}
 
+export default function Navbar({ onMenuClick }: Props) {
   return (
 
     <AppBar
@@ -17,6 +23,14 @@ export default function Navbar() {
     >
 
       <Toolbar>
+
+        <IconButton
+          edge="start"
+          className="navbar-menu-btn"
+          onClick={onMenuClick}
+        >
+          <MenuIcon />
+        </IconButton>
 
         <Typography
           component="div"

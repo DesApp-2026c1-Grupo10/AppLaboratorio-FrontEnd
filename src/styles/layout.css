@@ -9,8 +9,6 @@
 /* SIDEBAR */
 
 .sidebar {
-  width: 240px;
-
   flex-shrink: 0;
 }
 
@@ -24,12 +22,39 @@
   color: white;
 }
 
+/* Desktop sidebar */
+.sidebar-desktop {
+  width: 240px;
+}
+
+/* Mobile sidebar (hidden on desktop, MUI handles its visibility on mobile) */
+.sidebar-mobile {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .sidebar-desktop {
+    display: none !important;
+  }
+
+  .sidebar-mobile {
+    display: block;
+  }
+}
+
 /* MAIN */
 
 .app-main {
   flex-grow: 1;
+  min-width: 0;
 }
 
 .app-content {
   padding: 24px;
+}
+
+@media (max-width: 900px) {
+  .app-content {
+    padding: 16px;
+  }
 }

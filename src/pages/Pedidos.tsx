@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Snackbar, Alert, Box, Typography } from '@mui/material';
+import { Snackbar, Alert, Box, CircularProgress, Typography } from '@mui/material';
 
 import PedidoForm from '../components/pedidos/PedidoForm';
 import PedidoTable from '../components/pedidos/PedidoTable';
@@ -130,7 +130,7 @@ export default function Pedidos() {
 
         <div className="pedidos-content">
           {loading ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}><Typography>Cargando...</Typography></Box>
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
           ) : (
             <>
               <PedidoForm laboratorios={laboratorios} onSubmitPedido={agregarPedido} onRefreshLabs={refreshLaboratorios} />

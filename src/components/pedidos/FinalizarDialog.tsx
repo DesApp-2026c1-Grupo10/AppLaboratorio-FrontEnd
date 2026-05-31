@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography,
   Table, TableBody, TableCell, TableHead, TableRow, TextField,
-  FormControl, InputLabel, Select, MenuItem, Alert,
+  FormControl, Select, MenuItem, Alert,
 } from '@mui/material';
 import type { Pedido } from '../../types/pedido';
 
@@ -72,8 +72,8 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
     setError('');
     setSubmitting(true);
     try {
-      const mats = materiales.filter((m) => m.cantidad > 0).map((m) => ({ id: m.id, cantidad: m.cantidad }));
-      const reas = reactivos.filter((r) => r.cantidad > 0).map((r) => ({ id: r.id, cantidad: r.cantidad }));
+      const mats = materiales.map((m) => ({ id: m.id, cantidad: m.cantidad }));
+      const reas = reactivos.map((r) => ({ id: r.id, cantidad: r.cantidad }));
       const eqs = equipos.map((e) => ({ id: e.id, estado: e.estado }));
       await onConfirm({ materiales: mats, reactivos: reas, equipos: eqs });
     } catch (err: any) {
@@ -116,7 +116,7 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
                             item.id === m.id ? { ...item, cantidad: val } : item
                           ));
                         }}
-                        inputProps={{ min: 0, max: m.solicitado }}
+                        slotProps={{ htmlInput: { min: 0, max: m.solicitado } }}
                         sx={{ width: 80 }}
                       />
                     </TableCell>
@@ -154,7 +154,7 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
                             item.id === r.id ? { ...item, cantidad: val } : item
                           ));
                         }}
-                        inputProps={{ min: 0, max: r.solicitado }}
+                        slotProps={{ htmlInput: { min: 0, max: r.solicitado } }}
                         sx={{ width: 80 }}
                       />
                     </TableCell>

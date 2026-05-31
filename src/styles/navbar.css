@@ -1,8 +1,4 @@
 .navbar {
-  width: calc(100% - 240px) !important;
-
-  margin-left: 240px !important;
-
   background-color: white !important;
 
   color: #0B1739 !important;
@@ -13,10 +9,31 @@
 
 .navbar-title {
   font-weight: 700 !important;
-
   font-size: 22px !important;
+}
+
+.navbar-menu-btn {
+  margin-right: 8px !important;
+  color: #0B1739 !important;
 }
 
 .navbar-spacer {
   flex-grow: 1;
+}
+
+@media (min-width: 901px) {
+  .navbar {
+    width: calc(100% - 240px) !important;
+    margin-left: 240px !important;
+  }
+
+  .navbar-menu-btn {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .navbar-title {
+    display: none;
+  }
 }

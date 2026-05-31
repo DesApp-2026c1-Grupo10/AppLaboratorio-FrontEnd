@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
-  Box, Typography, Button, TextField, Table, TableBody, TableCell,
+  Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
   TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions,
   IconButton, Chip, Snackbar, Alert,
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import { getReactivos, createReactivo, updateReactivo, deleteReactivo } from '../api/reactivos';
 import { getLaboratorios } from '../api/laboratorios';
@@ -12,6 +13,7 @@ import type { Reactivo } from '../types/reactivo';
 import '../styles/inventario.css';
 
 export default function Reactivos() {
+  const navigate = useNavigate();
   const [reactivos, setReactivos] = useState<Reactivo[]>([]);
   const [laboratorios, setLaboratorios] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -110,7 +112,7 @@ export default function Reactivos() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? <TableRow><TableCell colSpan={7} align="center">Cargando...</TableCell></TableRow>
+              {loading ? <TableRow><TableCell colSpan={7} align="center"><CircularProgress size={30} /></TableCell></TableRow>
               : filtered.length === 0 ? <TableRow><TableCell colSpan={7} align="center">No hay reactivos</TableCell></TableRow>
               : filtered.map((r) => (
                 <TableRow key={r.id}>
@@ -127,6 +129,7 @@ export default function Reactivos() {
                   <TableCell>{r.prep_time || 0}</TableCell>
                   <TableCell>{r.laboratorio?.nombre || '-'}</TableCell>
                   <TableCell>
+                    <IconButton size="small" onClick={() => navigate(`/movimientos?reactivoId=${r.id}`)} title="Ver movimientos"><HistoryIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => openEdit(r)}><EditIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => setDeleteDialog(r.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                   </TableCell>
@@ -145,7 +148,7 @@ export default function Reactivos() {
             <TextField label="Descripción" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} fullWidth multiline rows={2} />
             <TextField label="Stock" type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} fullWidth />
             <TextField label="Unidad de Medida" value={form.unidadMedida} onChange={(e) => setForm({ ...form, unidadMedida: e.target.value })} fullWidth />
-            <TextField label="Vencimiento" type="date" value={form.vencimiento} onChange={(e) => setForm({ ...form, vencimiento: e.target.value })} fullWidth InputLabelProps={{ shrink: true }} />
+            <TextField label="Vencimiento" type="date" value={form.vencimiento} onChange={(e) => setForm({ ...form, vencimiento: e.target.value })} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
             <TextField label="Tiempo de Preparación (min)" type="number" value={form.prep_time} onChange={(e) => setForm({ ...form, prep_time: Number(e.target.value) })} fullWidth />
             <TextField label="Laboratorio" select value={form.laboratorioId} onChange={(e) => setForm({ ...form, laboratorioId: e.target.value })} fullWidth slotProps={{ select: { native: true } }}>
               <option value="">Sin laboratorio</option>

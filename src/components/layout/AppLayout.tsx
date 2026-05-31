@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Box,
   Toolbar,
@@ -18,19 +19,20 @@ interface Props {
 export default function AppLayout({
   children,
 }: Props) {
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
 
     <Box className="app-layout">
 
-      <Sidebar />
+      <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <Box
         component="main"
         className="app-main"
       >
 
-        <Navbar />
+        <Navbar onMenuClick={() => setMobileOpen(!mobileOpen)} />
 
         <Toolbar />
 

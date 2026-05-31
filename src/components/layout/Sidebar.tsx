@@ -19,7 +19,7 @@ import EventNoteIcon from "@mui/icons-material/EventNote";
 import BarChartIcon from "@mui/icons-material/BarChart";
 
 import {
-  Link,
+  useNavigate,
   useLocation,
 } from "react-router-dom";
 
@@ -27,12 +27,19 @@ const menuItems = [
   { text: "Dashboard", path: "/", icon: <DashboardIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
   { text: "Laboratorios", path: "/laboratorios", icon: <ScienceIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
   { text: "Pedidos", path: "/pedidos", icon: <EventNoteIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
+  { text: "Agenda", path: "/agenda", icon: <EventNoteIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
   { text: "Inventario", path: "/inventario", icon: <InventoryIcon />, roles: ['Desarrollador'] },
   { text: "Estadísticas", path: "/estadisticas", icon: <BarChartIcon />, roles: ['Desarrollador'] },
 ];
 
-export default function Sidebar() {
+interface Props {
+  mobileOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ mobileOpen, onClose }: Props) {
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Buscamos con las dos posibles claves por si hubo una mezcla de nombres
   const userString = localStorage.getItem("user") || localStorage.getItem("usuario") || "{}";
@@ -47,8 +54,8 @@ export default function Sidebar() {
     window.location.href = "/login";
   }
 
-  return (
-    <Drawer variant="permanent" className="sidebar">
+  const drawerContent = (
+    <>
       <Toolbar>
         <Typography component="div" className="sidebar-logo">
           LabManager Pro
@@ -68,10 +75,9 @@ export default function Sidebar() {
           {menuItems.filter((item) => item.roles.includes(user.rol)).map((item) => (
             <ListItemButton
               key={item.path}
-              component={Link}
-              to={item.path}
               selected={location.pathname === item.path}
               className="sidebar-menu-item"
+              onClick={() => { navigate(item.path); onClose(); }}
             >
               <ListItemIcon sx={{ color: "white" }}>
                 {item.icon}
@@ -101,6 +107,25 @@ export default function Sidebar() {
           </Button>
         </Box>
       </Box>
-    </Drawer>
+    </>
+  );
+
+  return (
+    <>
+      <Drawer
+        variant="permanent"
+        className="sidebar sidebar-desktop"
+      >
+        {drawerContent}
+      </Drawer>
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={onClose}
+        className="sidebar sidebar-mobile"
+      >
+        {drawerContent}
+      </Drawer>
+    </>
   );
 }

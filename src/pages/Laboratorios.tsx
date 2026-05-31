@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getLaboratorios, createLaboratorio } from "../api/laboratorios";
-import { TextField, Button, Snackbar, Alert, Accordion, AccordionSummary, AccordionDetails, Typography } from "@mui/material";
+import { Box, CircularProgress, TextField, Button, Snackbar, Alert, Accordion, AccordionSummary, AccordionDetails, Typography } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type { Laboratorio } from "../types/laboratorio";
 import "../styles/laboratorio.css";
@@ -54,7 +54,7 @@ export default function Laboratorios() {
 
   const edificios = [...new Set(laboratorios.map((l) => l.edificio))];
 
-  if (loading) return <AppLayout><p>Cargando laboratorios...</p></AppLayout>;
+  if (loading) return <AppLayout><Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box></AppLayout>;
   if (error) return <AppLayout><p>{error}</p></AppLayout>;
 
   return (

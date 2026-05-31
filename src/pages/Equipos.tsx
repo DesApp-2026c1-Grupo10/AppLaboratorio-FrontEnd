@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  Box, Typography, Button, TextField, Table, TableBody, TableCell,
+  Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
   TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions,
   IconButton, Chip, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel,
 } from '@mui/material';
@@ -134,7 +134,7 @@ export default function Equipos() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? <TableRow><TableCell colSpan={7} align="center">Cargando...</TableCell></TableRow>
+              {loading ? <TableRow><TableCell colSpan={7} align="center"><CircularProgress size={30} /></TableCell></TableRow>
               : filtered.length === 0 ? <TableRow><TableCell colSpan={7} align="center">No hay equipos</TableCell></TableRow>
               : filtered.map((eq) => (
                 <TableRow key={eq.id}>
@@ -184,7 +184,7 @@ export default function Equipos() {
                 <MenuItem value="false">No</MenuItem>
               </Select>
             </FormControl>
-            <TextField label="Última Revisión" type="date" value={form.ultimaRevision} onChange={(e) => setForm({ ...form, ultimaRevision: e.target.value })} fullWidth InputLabelProps={{ shrink: true }} />
+            <TextField label="Última Revisión" type="date" value={form.ultimaRevision} onChange={(e) => setForm({ ...form, ultimaRevision: e.target.value })} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
             <TextField label="Observaciones" value={form.observaciones} onChange={(e) => setForm({ ...form, observaciones: e.target.value })} fullWidth multiline rows={2} />
           </Box>
         </DialogContent>

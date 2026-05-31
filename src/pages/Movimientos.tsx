@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  Box, Typography, Button, TextField, Table, TableBody, TableCell,
+  Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
   TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions,
   Chip, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel,
 } from '@mui/material';
-import { Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
+import { Add as AddIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import { getMovimientos, createMovimiento } from '../api/movimientos';
 import { getMateriales } from '../api/materiales';
@@ -13,6 +14,10 @@ import type { MovimientoStock } from '../types/movimiento';
 import '../styles/inventario.css';
 
 export default function Movimientos() {
+  const [searchParams] = useSearchParams();
+  const materialFilterUrl = searchParams.get('materialId');
+  const reactivoFilterUrl = searchParams.get('reactivoId');
+
   const [movimientos, setMovimientos] = useState<MovimientoStock[]>([]);
   const [materiales, setMateriales] = useState<any[]>([]);
   const [reactivos, setReactivos] = useState<any[]>([]);
@@ -24,13 +29,17 @@ export default function Movimientos() {
   const [tipoItem, setTipoItem] = useState<'material' | 'reactivo'>('material');
 
   useEffect(() => {
-    Promise.all([getMovimientos(), getMateriales(), getReactivos()])
+    Promise.all([
+      getMovimientos(undefined, materialFilterUrl ? Number(materialFilterUrl) : undefined, reactivoFilterUrl ? Number(reactivoFilterUrl) : undefined),
+      getMateriales(), getReactivos(),
+    ])
       .then(([mData, matData, rData]) => { setMovimientos(mData); setMateriales(matData); setReactivos(rData); })
       .catch(() => setSnackbar({ msg: 'Error cargando datos', severity: 'error' }))
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = tipoFilter ? movimientos.filter((m) => m.tipoMovimiento === tipoFilter) : movimientos;
+  const filtered = movimientos
+    .filter((m) => !tipoFilter || m.tipoMovimiento === tipoFilter);
 
   const openCreate = () => {
     setForm({ tipoMovimiento: 'entrada', cantidad: 1, fecha: new Date().toISOString().split('T')[0], observacion: '', materialId: '', reactivoId: '' });
@@ -82,6 +91,18 @@ export default function Movimientos() {
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nuevo Movimiento</Button>
         </Box>
 
+        {(materialFilterUrl || reactivoFilterUrl) && (
+          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Chip
+              label={`Filtrando por: ${materialFilterUrl ? `Material #${materialFilterUrl}` : `Reactivo #${reactivoFilterUrl}`}`}
+              color="primary"
+              size="small"
+              onDelete={() => window.history.pushState({}, '', '/movimientos')}
+            />
+            <Button size="small" onClick={() => window.location.reload()}>Limpiar filtro</Button>
+          </Box>
+        )}
+
         <Box className="inv-table-container">
           <Table>
             <TableHead>
@@ -95,7 +116,7 @@ export default function Movimientos() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? <TableRow><TableCell colSpan={6} align="center">Cargando...</TableCell></TableRow>
+              {loading ? <TableRow><TableCell colSpan={6} align="center"><CircularProgress size={30} /></TableCell></TableRow>
               : filtered.length === 0 ? <TableRow><TableCell colSpan={6} align="center">No hay movimientos</TableCell></TableRow>
               : filtered.map((m) => (
                 <TableRow key={m.id}>
@@ -147,8 +168,8 @@ export default function Movimientos() {
                 </Select>
               </FormControl>
             )}
-            <TextField label="Cantidad" type="number" value={form.cantidad} onChange={(e) => setForm({ ...form, cantidad: Number(e.target.value) })} fullWidth inputProps={{ min: 1 }} />
-            <TextField label="Fecha" type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} fullWidth InputLabelProps={{ shrink: true }} />
+            <TextField label="Cantidad" type="number" value={form.cantidad} onChange={(e) => setForm({ ...form, cantidad: Number(e.target.value) })} fullWidth slotProps={{ htmlInput: { min: 1 } }} />
+            <TextField label="Fecha" type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
             <TextField label="Observación" value={form.observacion} onChange={(e) => setForm({ ...form, observacion: e.target.value })} fullWidth multiline rows={2} />
           </Box>
         </DialogContent>

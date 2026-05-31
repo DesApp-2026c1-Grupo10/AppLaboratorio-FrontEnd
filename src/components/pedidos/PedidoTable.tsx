@@ -4,7 +4,9 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Typography, TableContainer, Paper,
 } from '@mui/material';
 import EstadoChip from './EstadoChip';
+import DetallePedidoDialog from './DetallePedidoDialog';
 import { getHistorialPedido } from '../../api/pedidos';
+import { formatTime } from '../../utils/format';
 import type { Pedido } from '../../types/pedido';
 
 interface HistorialEntry {
@@ -26,6 +28,8 @@ interface Props {
 
 export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, finalizarPedido, esAdmin }: Props) {
 
+  const [detalleOpen, setDetalleOpen] = useState(false);
+  const [detallePedido, setDetallePedido] = useState<Pedido | null>(null);
   const [historialOpen, setHistorialOpen] = useState(false);
   const [historial, setHistorial] = useState<HistorialEntry[]>([]);
   const [historialPedidoId, setHistorialPedidoId] = useState<number | null>(null);
@@ -68,6 +72,7 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
               <TableCell>Laboratorio</TableCell>
               <TableCell>Alumnos</TableCell>
               <TableCell>Estado</TableCell>
+              <TableCell>Detalle</TableCell>
               <TableCell>Historial</TableCell>
               {esAdmin && <TableCell>Acciones</TableCell>}
             </TableRow>
@@ -76,10 +81,15 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
             {pedidos.map((pedido) => (
               <TableRow key={pedido.id}>
                 <TableCell>{pedido.fecha ? pedido.fecha.split('-').reverse().join('/') : '-'}</TableCell>
-                <TableCell>{pedido.horaInicio} - {pedido.horaFin}</TableCell>
+                <TableCell>{formatTime(pedido.horaInicio)} - {formatTime(pedido.horaFin)}</TableCell>
                 <TableCell>{pedido.Laboratorio?.nombre}</TableCell>
                 <TableCell>{pedido.cantidadAlumnos}</TableCell>
                 <TableCell><EstadoChip estado={pedido.estado} /></TableCell>
+                <TableCell>
+                  <Button size="small" onClick={() => { setDetallePedido(pedido); setDetalleOpen(true); }}>
+                    Ver detalle
+                  </Button>
+                </TableCell>
                 <TableCell>
                   <Button size="small" onClick={() => verHistorial(pedido.id)}>
                     Ver historial
@@ -114,6 +124,12 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
           </TableBody>
         </Table>
       </TableContainer>
+
+      <DetallePedidoDialog
+        open={detalleOpen}
+        pedido={detallePedido}
+        onClose={() => setDetalleOpen(false)}
+      />
 
       <Dialog open={historialOpen} onClose={() => setHistorialOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Historial del Pedido #{historialPedidoId}</DialogTitle>

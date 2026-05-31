@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Box, Typography, Card, CardContent, Chip, Grid } from '@mui/material';
 import AppLayout from '../components/layout/AppLayout';
 import { getPedidos } from '../api/pedidos';
+import { formatTime } from '../utils/format';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -38,7 +39,7 @@ export default function Agenda() {
           .filter((p: any) => p.estado === 'Aprobado')
           .map((p: any) => ({
             id: p.id,
-            horario: `${p.horaInicio} - ${p.horaFin}`,
+            horario: `${formatTime(p.horaInicio)} - ${formatTime(p.horaFin)}`,
             laboratorioNombre: p.Laboratorio?.nombre || 'Sin nombre',
             alumnos: p.cantidadAlumnos,
             fecha: p.fecha,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Typography } from "@mui/material";
+import { Box, CircularProgress, Typography } from "@mui/material";
 import SchoolIcon from '@mui/icons-material/School';
 import ScienceIcon from '@mui/icons-material/Science';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
@@ -7,6 +7,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 import "../styles/dashboard.css";
+import { formatTime } from '../utils/format';
 import { getLaboratorios } from "../api/laboratorios";
 import { getPedidos } from "../api/pedidos";
 import { getMateriales } from "../api/materiales";
@@ -44,7 +45,7 @@ export default function Dashboard() {
     }
   }
 
-  if (loading) return <AppLayout><Typography sx={{ p: 4 }}>Cargando dashboard...</Typography></AppLayout>;
+  if (loading) return <AppLayout><Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box></AppLayout>;
 
   return (
     <AppLayout>
@@ -95,7 +96,7 @@ export default function Dashboard() {
               .map((pedido: any) => (
                 <div className="timeline-item" key={pedido.id}>
                   <div>
-                    <div className="timeline-hour">{pedido.horaInicio} - {pedido.horaFin}</div>
+                    <div className="timeline-hour">{formatTime(pedido.horaInicio)} - {formatTime(pedido.horaFin)}</div>
                     <div className="timeline-class">{pedido.Laboratorio?.nombre} · {pedido.cantidadAlumnos} alumnos</div>
                   </div>
                   <div className={`status ${pedido.estado === "Aprobado" ? "status-active" : pedido.estado === "Pendiente" ? "status-next" : ""}`}>

@@ -1,8 +1,3 @@
-.sidebar {
-  width: 240px;
-  flex-shrink: 0;
-}
-
 .sidebar .MuiDrawer-paper {
   width: 240px;
   box-sizing: border-box;
@@ -79,7 +74,4 @@
   background-color: #1E2A5A;
 }
 
-@media (max-width: 768px) {
-  .sidebar { width: 200px; }
-  .sidebar .MuiDrawer-paper { width: 200px; }
-}
+

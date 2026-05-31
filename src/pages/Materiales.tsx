@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
-  Box, Typography, Button, TextField, Table, TableBody, TableCell,
+  Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
   TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions,
   IconButton, Chip, Snackbar, Alert, TableSortLabel,
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import { getMateriales, createMaterial, updateMaterial, deleteMaterial } from '../api/materiales';
 import { getLaboratorios } from '../api/laboratorios';
@@ -12,6 +13,7 @@ import type { Material } from '../types/material';
 import '../styles/inventario.css';
 
 export default function Materiales() {
+  const navigate = useNavigate();
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [laboratorios, setLaboratorios] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -115,7 +117,7 @@ export default function Materiales() {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} align="center">Cargando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} align="center"><CircularProgress size={30} /></TableCell></TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={7} align="center">No hay materiales</TableCell></TableRow>
               ) : filtered.map((m) => (
@@ -129,6 +131,7 @@ export default function Materiales() {
                   <TableCell>{m.unit || '-'}</TableCell>
                   <TableCell>{m.laboratorio?.nombre || '-'}</TableCell>
                   <TableCell>
+                    <IconButton size="small" onClick={() => navigate(`/movimientos?materialId=${m.id}`)} title="Ver movimientos"><HistoryIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => openEdit(m)}><EditIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => setDeleteDialog(m.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                   </TableCell>
