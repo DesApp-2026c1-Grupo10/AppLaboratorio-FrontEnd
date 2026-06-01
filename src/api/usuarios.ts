@@ -1,7 +1,7 @@
-const API_URL = "http://localhost:3001/api/usuarios";
+import { API_URL } from './config';
 
 export async function loginUsuario(email: string, password: string) {
-  const response = await fetch(`${API_URL}/login`, {
+  const response = await fetch(`${API_URL}/usuarios/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

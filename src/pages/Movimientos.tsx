@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
-  TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions,
-  Chip, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel,
+  Box, CircularProgress, Typography, Button, Table, TableBody, TableCell,
+  TableHead, TableRow, Chip, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel, TablePagination,
 } from '@mui/material';
+import type { SnackbarState } from '../types/snackbar';
+import TableSkeleton from '../components/TableSkeleton';
 import { Add as AddIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
+import MovimientoDialog from '../components/movimientos/MovimientoDialog';
 import { getMovimientos, createMovimiento } from '../api/movimientos';
 import { getMateriales } from '../api/materiales';
 import { getReactivos } from '../api/reactivos';
 import type { MovimientoStock } from '../types/movimiento';
+import type { Material } from '../types/material';
+import type { Reactivo } from '../types/reactivo';
 import '../styles/inventario.css';
 
 export default function Movimientos() {
@@ -19,56 +23,65 @@ export default function Movimientos() {
   const reactivoFilterUrl = searchParams.get('reactivoId');
 
   const [movimientos, setMovimientos] = useState<MovimientoStock[]>([]);
-  const [materiales, setMateriales] = useState<any[]>([]);
-  const [reactivos, setReactivos] = useState<any[]>([]);
+  const [materiales, setMateriales] = useState<Material[]>([]);
+  const [reactivos, setReactivos] = useState<Reactivo[]>([]);
   const [tipoFilter, setTipoFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
-  const [form, setForm] = useState({ tipoMovimiento: 'entrada' as 'entrada' | 'salida', cantidad: 1, fecha: '', observacion: '', materialId: '', reactivoId: '' });
-  const [tipoItem, setTipoItem] = useState<'material' | 'reactivo'>('material');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    Promise.all([
-      getMovimientos(undefined, materialFilterUrl ? Number(materialFilterUrl) : undefined, reactivoFilterUrl ? Number(reactivoFilterUrl) : undefined),
-      getMateriales(), getReactivos(),
-    ])
-      .then(([mData, matData, rData]) => { setMovimientos(mData); setMateriales(matData); setReactivos(rData); })
-      .catch(() => setSnackbar({ msg: 'Error cargando datos', severity: 'error' }))
-      .finally(() => setLoading(false));
+    getMateriales().then(setMateriales).catch(console.error);
+    getReactivos().then(setReactivos).catch(console.error);
   }, []);
 
-  const filtered = movimientos
-    .filter((m) => !tipoFilter || m.tipoMovimiento === tipoFilter);
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const result = await getMovimientos(
+          tipoFilter || undefined,
+          materialFilterUrl ? Number(materialFilterUrl) : undefined,
+          reactivoFilterUrl ? Number(reactivoFilterUrl) : undefined,
+          page + 1, rowsPerPage,
+        );
+        setMovimientos(Array.isArray(result) ? result : (result?.data ?? []));
+        setTotal(Array.isArray(result) ? result.length : (result?.total ?? 0));
+      } catch {
+        setSnackbar({ msg: 'Error cargando datos', severity: 'error' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [tipoFilter, page, rowsPerPage, materialFilterUrl, reactivoFilterUrl]);
 
   const openCreate = () => {
-    setForm({ tipoMovimiento: 'entrada', cantidad: 1, fecha: new Date().toISOString().split('T')[0], observacion: '', materialId: '', reactivoId: '' });
-    setTipoItem('material');
     setDialogOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!form.cantidad || form.cantidad < 1) { setSnackbar({ msg: 'La cantidad debe ser mayor a 0', severity: 'error' }); return; }
-    if (!form.materialId && !form.reactivoId) { setSnackbar({ msg: 'Seleccione un material o reactivo', severity: 'error' }); return; }
-
+  const handleSave = async (data: Record<string, any>) => {
     const usuarioStorage = localStorage.getItem('usuario');
     if (!usuarioStorage) { setSnackbar({ msg: 'Sesión expirada', severity: 'error' }); return; }
     const usuario = JSON.parse(usuarioStorage);
 
     try {
-      const payload: any = {
-        tipoMovimiento: form.tipoMovimiento, cantidad: Number(form.cantidad),
-        fecha: form.fecha || new Date().toISOString().split('T')[0],
-        observacion: form.observacion || null, usuarioId: usuario.id,
+      const payload: Record<string, any> = {
+        tipoMovimiento: data.tipoMovimiento, cantidad: Number(data.cantidad),
+        fecha: data.fecha || new Date().toISOString().split('T')[0],
+        observacion: data.observacion || null, usuarioId: usuario.id,
       };
-      if (tipoItem === 'material' && form.materialId) payload.materialId = Number(form.materialId);
-      if (tipoItem === 'reactivo' && form.reactivoId) payload.reactivoId = Number(form.reactivoId);
+      if (data.materialId) payload.materialId = Number(data.materialId);
+      if (data.reactivoId) payload.reactivoId = Number(data.reactivoId);
 
       const created = await createMovimiento(payload);
       setMovimientos((prev) => [created, ...prev]);
       setSnackbar({ msg: 'Movimiento registrado', severity: 'success' });
       setDialogOpen(false);
-    } catch (err: any) { setSnackbar({ msg: err.message, severity: 'error' }); }
+    } catch (err) { setSnackbar({ msg: err instanceof Error ? err.message : 'Error', severity: 'error' }); }
   };
 
   return (
@@ -116,9 +129,9 @@ export default function Movimientos() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? <TableRow><TableCell colSpan={6} align="center"><CircularProgress size={30} /></TableCell></TableRow>
-              : filtered.length === 0 ? <TableRow><TableCell colSpan={6} align="center">No hay movimientos</TableCell></TableRow>
-              : filtered.map((m) => (
+              {loading ? <TableSkeleton columns={6} rows={5} />
+              : movimientos.length === 0 ? <TableRow><TableCell colSpan={6} align="center">No hay movimientos</TableCell></TableRow>
+              : movimientos.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell>{new Date(m.fecha).toLocaleDateString()}</TableCell>
                   <TableCell>
@@ -132,52 +145,26 @@ export default function Movimientos() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination
+            component="div"
+            count={total}
+            page={page}
+            onPageChange={(_, p) => setPage(p)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+            labelRowsPerPage="Filas por página:"
+            labelDisplayedRows={({ from, to, count }) => count !== 0 ? `${from}–${to} de ${count} movimientos` : '0 resultados'}
+          />
         </Box>
       </Box>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Registrar Movimiento</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <FormControl fullWidth>
-              <InputLabel>Tipo de Movimiento</InputLabel>
-              <Select value={form.tipoMovimiento} label="Tipo de Movimiento" onChange={(e) => setForm({ ...form, tipoMovimiento: e.target.value as 'entrada' | 'salida' })}>
-                <MenuItem value="entrada">Entrada</MenuItem>
-                <MenuItem value="salida">Salida</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>Tipo de Item</InputLabel>
-              <Select value={tipoItem} label="Tipo de Item" onChange={(e) => { setTipoItem(e.target.value as 'material' | 'reactivo'); setForm({ ...form, materialId: '', reactivoId: '' }); }}>
-                <MenuItem value="material">Material</MenuItem>
-                <MenuItem value="reactivo">Reactivo</MenuItem>
-              </Select>
-            </FormControl>
-            {tipoItem === 'material' ? (
-              <FormControl fullWidth>
-                <InputLabel>Material</InputLabel>
-                <Select value={form.materialId} label="Material" onChange={(e) => setForm({ ...form, materialId: e.target.value })}>
-                  {materiales.map((m: any) => <MenuItem key={m.id} value={m.id}>{m.name} (Stock: {m.stock})</MenuItem>)}
-                </Select>
-              </FormControl>
-            ) : (
-              <FormControl fullWidth>
-                <InputLabel>Reactivo</InputLabel>
-                <Select value={form.reactivoId} label="Reactivo" onChange={(e) => setForm({ ...form, reactivoId: e.target.value })}>
-                  {reactivos.map((r: any) => <MenuItem key={r.id} value={r.id}>{r.name} (Stock: {r.stock})</MenuItem>)}
-                </Select>
-              </FormControl>
-            )}
-            <TextField label="Cantidad" type="number" value={form.cantidad} onChange={(e) => setForm({ ...form, cantidad: Number(e.target.value) })} fullWidth slotProps={{ htmlInput: { min: 1 } }} />
-            <TextField label="Fecha" type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField label="Observación" value={form.observacion} onChange={(e) => setForm({ ...form, observacion: e.target.value })} fullWidth multiline rows={2} />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave}>Guardar</Button>
-        </DialogActions>
-      </Dialog>
+      <MovimientoDialog
+        open={dialogOpen}
+        materiales={materiales}
+        reactivos={reactivos}
+        onSave={handleSave}
+        onClose={() => setDialogOpen(false)}
+      />
 
       {snackbar && <Snackbar open autoHideDuration={3000} onClose={() => setSnackbar(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}><Alert severity={snackbar.severity}>{snackbar.msg}</Alert></Snackbar>}
     </AppLayout>

@@ -2,63 +2,71 @@ import { useEffect, useState } from 'react';
 import {
   Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
   TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions,
-  IconButton, Chip, Snackbar, Alert,
+  IconButton, Chip, Snackbar, Alert, TablePagination,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
+import ReactivoDialog from '../components/reactivos/ReactivoDialog';
 import { getReactivos, createReactivo, updateReactivo, deleteReactivo } from '../api/reactivos';
 import { getLaboratorios } from '../api/laboratorios';
+import type { SnackbarState } from '../types/snackbar';
+import TableSkeleton from '../components/TableSkeleton';
 import type { Reactivo } from '../types/reactivo';
+import type { Laboratorio } from '../types/laboratorio';
 import '../styles/inventario.css';
 
 export default function Reactivos() {
   const navigate = useNavigate();
   const [reactivos, setReactivos] = useState<Reactivo[]>([]);
-  const [laboratorios, setLaboratorios] = useState<any[]>([]);
+  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<number | null>(null);
-  const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
+  const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
   const [editing, setEditing] = useState<Reactivo | null>(null);
   const [vencFilter, setVencFilter] = useState(false);
-  const [form, setForm] = useState({ name: '', descripcion: '', stock: 0, unidadMedida: '', vencimiento: '', prep_time: 0, laboratorioId: '' });
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    Promise.all([getReactivos(), getLaboratorios()])
-      .then(([rData, lData]) => { setReactivos(rData); setLaboratorios(lData); })
-      .catch(() => setSnackbar({ msg: 'Error cargando datos', severity: 'error' }))
-      .finally(() => setLoading(false));
+    getLaboratorios().then(setLaboratorios).catch(console.error);
   }, []);
 
-  const filtered = reactivos
-    .filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()))
-    .filter((r) => !vencFilter || (r.vencimiento && new Date(r.vencimiento) <= new Date(Date.now() + 30 * 86400000)));
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const result = await getReactivos(search || undefined, vencFilter || undefined, page + 1, rowsPerPage);
+        setReactivos(Array.isArray(result) ? result : (result?.data ?? []));
+        setTotal(Array.isArray(result) ? result.length : (result?.total ?? 0));
+      } catch {
+        setSnackbar({ msg: 'Error cargando datos', severity: 'error' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [search, vencFilter, page, rowsPerPage]);
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', descripcion: '', stock: 0, unidadMedida: '', vencimiento: '', prep_time: 0, laboratorioId: '' });
     setDialogOpen(true);
   };
 
   const openEdit = (r: Reactivo) => {
     setEditing(r);
-    setForm({
-      name: r.name, descripcion: r.descripcion || '', stock: r.stock,
-      unidadMedida: r.unidadMedida || '', vencimiento: r.vencimiento || '',
-      prep_time: r.prep_time, laboratorioId: String(r.laboratorioId || ''),
-    });
     setDialogOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!form.name.trim()) { setSnackbar({ msg: 'El nombre es obligatorio', severity: 'error' }); return; }
+  const handleSave = async (data: Record<string, any>) => {
     try {
       const payload = {
-        ...form, stock: Number(form.stock), prep_time: Number(form.prep_time),
-        vencimiento: form.vencimiento || null,
-        laboratorioId: form.laboratorioId ? Number(form.laboratorioId) : null,
+        ...data, stock: Number(data.stock), prep_time: Number(data.prep_time),
+        vencimiento: data.vencimiento || null,
+        laboratorioId: data.laboratorioId ? Number(data.laboratorioId) : null,
       };
       if (editing) {
         const updated = await updateReactivo(editing.id, payload);
@@ -70,7 +78,7 @@ export default function Reactivos() {
         setSnackbar({ msg: 'Reactivo creado', severity: 'success' });
       }
       setDialogOpen(false);
-    } catch (err: any) { setSnackbar({ msg: err.message, severity: 'error' }); }
+    } catch (err) { setSnackbar({ msg: err instanceof Error ? err.message : 'Error', severity: 'error' }); }
   };
 
   const handleDelete = async (id: number) => {
@@ -112,9 +120,9 @@ export default function Reactivos() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? <TableRow><TableCell colSpan={7} align="center"><CircularProgress size={30} /></TableCell></TableRow>
-              : filtered.length === 0 ? <TableRow><TableCell colSpan={7} align="center">No hay reactivos</TableCell></TableRow>
-              : filtered.map((r) => (
+              {loading ? <TableSkeleton columns={7} rows={5} />
+              : reactivos.length === 0 ? <TableRow><TableCell colSpan={7} align="center">No hay reactivos</TableCell></TableRow>
+              : reactivos.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell>{r.name}</TableCell>
                   <TableCell>
@@ -137,30 +145,26 @@ export default function Reactivos() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination
+            component="div"
+            count={total}
+            page={page}
+            onPageChange={(_, p) => setPage(p)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+            labelRowsPerPage="Filas por página:"
+            labelDisplayedRows={({ from, to, count }) => count !== 0 ? `${from}–${to} de ${count} reactivos` : '0 resultados'}
+          />
         </Box>
       </Box>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editing ? 'Editar Reactivo' : 'Nuevo Reactivo'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField label="Nombre *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} fullWidth />
-            <TextField label="Descripción" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} fullWidth multiline rows={2} />
-            <TextField label="Stock" type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} fullWidth />
-            <TextField label="Unidad de Medida" value={form.unidadMedida} onChange={(e) => setForm({ ...form, unidadMedida: e.target.value })} fullWidth />
-            <TextField label="Vencimiento" type="date" value={form.vencimiento} onChange={(e) => setForm({ ...form, vencimiento: e.target.value })} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField label="Tiempo de Preparación (min)" type="number" value={form.prep_time} onChange={(e) => setForm({ ...form, prep_time: Number(e.target.value) })} fullWidth />
-            <TextField label="Laboratorio" select value={form.laboratorioId} onChange={(e) => setForm({ ...form, laboratorioId: e.target.value })} fullWidth slotProps={{ select: { native: true } }}>
-              <option value="">Sin laboratorio</option>
-              {laboratorios.map((l: any) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
-            </TextField>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave}>Guardar</Button>
-        </DialogActions>
-      </Dialog>
+      <ReactivoDialog
+        open={dialogOpen}
+        editing={editing}
+        laboratorios={laboratorios}
+        onSave={handleSave}
+        onClose={() => setDialogOpen(false)}
+      />
 
       <Dialog open={deleteDialog !== null} onClose={() => setDeleteDialog(null)}>
         <DialogTitle>¿Eliminar reactivo?</DialogTitle>

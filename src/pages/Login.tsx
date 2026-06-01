@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUsuario } from "../api/usuarios";
 import { Box, Paper, Typography, TextField, Button, Snackbar, Alert } from "@mui/material";
+import type { SnackbarState } from '../types/snackbar';
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
+  const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -17,8 +18,8 @@ export default function Login() {
       const userData = await loginUsuario(email, password);
       localStorage.setItem("usuario", JSON.stringify(userData));
       navigate("/");
-    } catch (error: any) {
-      setSnackbar({ msg: error.message || 'Error al iniciar sesión', severity: 'error' });
+    } catch (error) {
+      setSnackbar({ msg: error instanceof Error ? error.message : 'Error al iniciar sesión', severity: 'error' });
     } finally {
       setLoading(false);
     }

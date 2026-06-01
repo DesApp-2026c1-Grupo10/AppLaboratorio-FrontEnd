@@ -26,8 +26,16 @@ function getWeekDays() {
   });
 }
 
+interface AgendaPedido {
+  id: number;
+  horario: string;
+  laboratorioNombre: string;
+  alumnos: number;
+  fecha: string;
+}
+
 export default function Agenda() {
-  const [pedidos, setPedidos] = useState<any[]>([]);
+  const [pedidos, setPedidos] = useState<AgendaPedido[]>([]);
   const [loading, setLoading] = useState(true);
   const weekDays = getWeekDays();
 
@@ -36,8 +44,8 @@ export default function Agenda() {
       try {
         const data = await getPedidos();
         const aprobados = data
-          .filter((p: any) => p.estado === 'Aprobado')
-          .map((p: any) => ({
+          .filter((p) => p.estado === 'Aprobado')
+          .map((p) => ({
             id: p.id,
             horario: `${formatTime(p.horaInicio)} - ${formatTime(p.horaFin)}`,
             laboratorioNombre: p.Laboratorio?.nombre || 'Sin nombre',

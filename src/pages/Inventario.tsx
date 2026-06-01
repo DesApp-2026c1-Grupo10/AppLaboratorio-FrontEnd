@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, Card, CardContent, Typography, Chip, Button,
+  Box, Card, CardContent, Typography, Chip,
 } from '@mui/material';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ScienceIcon from '@mui/icons-material/Science';
@@ -14,14 +14,17 @@ import { getMateriales } from '../api/materiales';
 import { getReactivos } from '../api/reactivos';
 import { getEquipos } from '../api/equipos';
 import { getMovimientos } from '../api/movimientos';
+import type { Material } from '../types/material';
+import type { Equipo } from '../types/equipo';
+import type { MovimientoStock } from '../types/movimiento';
 import '../styles/inventario.css';
 
 export default function Inventario() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ materiales: 0, reactivos: 0, equipos: 0 });
-  const [stockBajo, setStockBajo] = useState<any[]>([]);
-  const [enMantenimiento, setEnMantenimiento] = useState<any[]>([]);
-  const [ultimosMovimientos, setUltimosMovimientos] = useState<any[]>([]);
+  const [stockBajo, setStockBajo] = useState<Material[]>([]);
+  const [enMantenimiento, setEnMantenimiento] = useState<Equipo[]>([]);
+  const [ultimosMovimientos, setUltimosMovimientos] = useState<MovimientoStock[]>([]);
 
   useEffect(() => {
     loadData();
@@ -36,8 +39,8 @@ export default function Inventario() {
         getMovimientos(),
       ]);
       setStats({ materiales: materiales.length, reactivos: reactivos.length, equipos: equipos.length });
-      setStockBajo(materiales.filter((m: any) => m.stockMinimo > 0 && m.stock <= m.stockMinimo));
-      setEnMantenimiento(equipos.filter((e: any) => e.status === 'Mantenimiento'));
+      setStockBajo(materiales.filter((m) => m.stockMinimo > 0 && m.stock <= m.stockMinimo));
+      setEnMantenimiento(equipos.filter((e) => e.status === 'Mantenimiento'));
       setUltimosMovimientos(movimientos.slice(0, 5));
     } catch (error) {
       console.error(error);
@@ -97,7 +100,7 @@ export default function Inventario() {
               {stockBajo.length === 0 ? (
                 <Typography color="text.secondary">No hay materiales con stock bajo</Typography>
               ) : (
-                stockBajo.map((m: any) => (
+                stockBajo.map((m) => (
                   <Box key={m.id} className="alerta-item">
                     <Typography><strong>{m.name}</strong></Typography>
                     <Chip label={`Stock: ${m.stock} / Mín: ${m.stockMinimo}`} color="warning" size="small" />
@@ -115,7 +118,7 @@ export default function Inventario() {
               {enMantenimiento.length === 0 ? (
                 <Typography color="text.secondary">No hay equipos en mantenimiento</Typography>
               ) : (
-                enMantenimiento.map((e: any) => (
+                enMantenimiento.map((e) => (
                   <Box key={e.id} className="alerta-item">
                     <Typography><strong>{e.name}</strong></Typography>
                     <Chip label={e.status} color="warning" size="small" />
@@ -135,7 +138,7 @@ export default function Inventario() {
             {ultimosMovimientos.length === 0 ? (
               <Typography color="text.secondary">No hay movimientos registrados</Typography>
             ) : (
-              ultimosMovimientos.map((m: any) => (
+              ultimosMovimientos.map((m) => (
                 <Box key={m.id} className="movimiento-item">
                   <Box>
                     <Chip

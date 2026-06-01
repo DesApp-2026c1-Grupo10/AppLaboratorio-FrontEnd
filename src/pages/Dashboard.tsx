@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
 import SchoolIcon from '@mui/icons-material/School';
 import ScienceIcon from '@mui/icons-material/Science';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
@@ -13,19 +13,21 @@ import { getPedidos } from "../api/pedidos";
 import { getMateriales } from "../api/materiales";
 import { getEquipos } from "../api/equipos";
 import AppLayout from "../components/layout/AppLayout";
+import type { Laboratorio } from '../types/laboratorio';
+import type { Pedido } from '../types/pedido';
 
 export default function Dashboard() {
-  const [laboratorios, setLaboratorios] = useState([]);
-  const [pedidos, setPedidos] = useState<any[]>([]);
+  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([]);
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [stockBajo, setStockBajo] = useState(0);
   const [equiposMantenimiento, setEquiposMantenimiento] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const d = new Date();
   const hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const pedidosHoy = pedidos.filter((p: any) => p.fecha === hoy);
-  const pendientes = pedidos.filter((p: any) => p.estado === "Pendiente");
-  const finalizados = pedidos.filter((p: any) => p.estado === "Finalizado");
+  const pedidosHoy = pedidos.filter((p) => p.fecha === hoy);
+  const pendientes = pedidos.filter((p) => p.estado === "Pendiente");
+  const finalizados = pedidos.filter((p) => p.estado === "Finalizado");
 
   useEffect(() => { loadDashboard(); }, []);
 
@@ -36,8 +38,8 @@ export default function Dashboard() {
       ]);
       setLaboratorios(labs);
       setPedidos(pedidosData);
-      setStockBajo(mats.filter((m: any) => m.stockMinimo > 0 && m.stock <= m.stockMinimo).length);
-      setEquiposMantenimiento(eqs.filter((e: any) => e.status === 'Mantenimiento').length);
+      setStockBajo(mats.filter((m) => m.stockMinimo > 0 && m.stock <= m.stockMinimo).length);
+      setEquiposMantenimiento(eqs.filter((e) => e.status === 'Mantenimiento').length);
     } catch (error) {
       console.error(error);
     } finally {
@@ -92,8 +94,8 @@ export default function Dashboard() {
             <p className="timeline-empty">No hay actividades para hoy</p>
           ) : (
             pedidosHoy
-              .sort((a: any, b: any) => a.horaInicio.localeCompare(b.horaInicio))
-              .map((pedido: any) => (
+              .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
+              .map((pedido) => (
                 <div className="timeline-item" key={pedido.id}>
                   <div>
                     <div className="timeline-hour">{formatTime(pedido.horaInicio)} - {formatTime(pedido.horaFin)}</div>

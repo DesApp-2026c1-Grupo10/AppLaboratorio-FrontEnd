@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
 
 import Login from '../pages/Login';
 import Inventario from '../pages/Inventario';
@@ -14,7 +15,7 @@ import Estadisticas from '../pages/Estadisticas';
 
 const adminRoutes = ['/inventario', '/materiales', '/reactivos', '/equipos', '/movimientos', '/estadisticas'];
 
-const RutaProtegida = ({ children }: { children: JSX.Element }) => {
+const RutaProtegida = ({ children }: { children: ReactNode }) => {
   const usuarioStorage = localStorage.getItem('usuario') || localStorage.getItem('user');
   if (!usuarioStorage) {
     return <Navigate to="/login" replace />;

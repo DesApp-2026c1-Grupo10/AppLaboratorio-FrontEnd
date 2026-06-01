@@ -38,7 +38,7 @@ interface Props {
 }
 
 function getEquipos(pedido: Pedido | null) {
-  return (pedido as any)?.Equipments || (pedido as any)?.Equipment || [];
+  return (pedido as Pedido & { Equipments?: any[] })?.Equipments || [];
 }
 
 export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: Props) {
@@ -59,7 +59,7 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
     }))
   );
   const [equipos, setEquipos] = useState<EquipoForm[]>(() =>
-    getEquipos(pedido).map((e: any) => ({
+    getEquipos(pedido).map((e: EquipoForm) => ({
       id: e.id,
       name: e.name,
       estado: 'Disponible',
@@ -76,8 +76,8 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
       const reas = reactivos.map((r) => ({ id: r.id, cantidad: r.cantidad }));
       const eqs = equipos.map((e) => ({ id: e.id, estado: e.estado }));
       await onConfirm({ materiales: mats, reactivos: reas, equipos: eqs });
-    } catch (err: any) {
-      setError(err.message || 'Error al finalizar');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al finalizar');
     } finally {
       setSubmitting(false);
     }
@@ -116,7 +116,7 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
                             item.id === m.id ? { ...item, cantidad: val } : item
                           ));
                         }}
-                        slotProps={{ htmlInput: { min: 0, max: m.solicitado } }}
+                        slotProps={{ htmlInput: { min: 0 } }}
                         sx={{ width: 80 }}
                       />
                     </TableCell>
@@ -154,7 +154,7 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
                             item.id === r.id ? { ...item, cantidad: val } : item
                           ));
                         }}
-                        slotProps={{ htmlInput: { min: 0, max: r.solicitado } }}
+                        slotProps={{ htmlInput: { min: 0 } }}
                         sx={{ width: 80 }}
                       />
                     </TableCell>

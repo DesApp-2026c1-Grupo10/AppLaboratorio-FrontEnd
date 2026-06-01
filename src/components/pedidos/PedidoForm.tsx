@@ -3,14 +3,19 @@ import {
   Box, Button, FormControl, InputLabel, MenuItem, Select, TextField,
   Chip, Typography, Autocomplete, IconButton, Alert, Slider, Tooltip,
 } from '@mui/material';
+import { useForm, Controller } from 'react-hook-form';
 import { Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { getMateriales } from '../../api/materiales';
 import { getReactivos } from '../../api/reactivos';
 import { getEquipos } from '../../api/equipos';
+import type { Material } from '../../types/material';
+import type { Reactivo } from '../../types/reactivo';
+import type { Equipo } from '../../types/equipo';
+import type { Laboratorio } from '../../types/laboratorio';
 
 interface Props {
-  onSubmitPedido: (data: any) => Promise<any>;
-  laboratorios: any[];
+  onSubmitPedido: (data: Record<string, any>) => Promise<any>;
+  laboratorios: Laboratorio[];
   onRefreshLabs?: () => void;
 }
 
@@ -22,21 +27,20 @@ interface ItemSeleccionado {
   unidadMedida?: string;
 }
 
-const initialForm = {
-  fecha: '', horaInicio: '', horaFin: '', laboratorioId: '', cantidadAlumnos: 1, descripcion: '',
-};
-
 export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs }: Props) {
-  const [materiales, setMateriales] = useState<any[]>([]);
-  const [reactivos, setReactivos] = useState<any[]>([]);
-  const [equipos, setEquipos] = useState<any[]>([]);
+  const [materiales, setMateriales] = useState<Material[]>([]);
+  const [reactivos, setReactivos] = useState<Reactivo[]>([]);
+  const [equipos, setEquipos] = useState<Equipo[]>([]);
 
-  const [form, setForm] = useState({ ...initialForm });
   const [selectedMaterials, setSelectedMaterials] = useState<ItemSeleccionado[]>([]);
   const [selectedReactivos, setSelectedReactivos] = useState<ItemSeleccionado[]>([]);
   const [selectedEquipos, setSelectedEquipos] = useState<number[]>([]);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
+    defaultValues: { fecha: '', horaInicio: '', horaFin: '', laboratorioId: '', cantidadAlumnos: 1, descripcion: '' },
+  });
 
   useEffect(() => {
     Promise.all([getMateriales(), getReactivos(), getEquipos()])
@@ -45,7 +49,7 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
   }, []);
 
   const resetForm = () => {
-    setForm({ ...initialForm });
+    reset({ fecha: '', horaInicio: '', horaFin: '', laboratorioId: '', cantidadAlumnos: 1, descripcion: '' });
     setSelectedMaterials([]);
     setSelectedReactivos([]);
     setSelectedEquipos([]);
@@ -54,53 +58,57 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
 
   const equiposDisponibles = equipos.filter((eq) => eq.status === 'Disponible');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: Record<string, any>) => {
     setError('');
-
-    if (!form.fecha || !form.horaInicio || !form.horaFin || !form.laboratorioId) {
+    if (!data.fecha || !data.horaInicio || !data.horaFin || !data.laboratorioId) {
       setError('Completá todos los campos obligatorios');
       return;
     }
-
     setSubmitting(true);
     try {
       await onSubmitPedido({
-        ...form,
-        laboratorioId: Number(form.laboratorioId),
-        cantidadAlumnos: Number(form.cantidadAlumnos),
+        ...data,
+        laboratorioId: Number(data.laboratorioId),
+        cantidadAlumnos: Number(data.cantidadAlumnos),
         materiales: selectedMaterials.map((m) => ({ id: m.id, cantidad: m.cantidad })),
         reactivos: selectedReactivos.map((r) => ({ id: r.id, cantidad: r.cantidad })),
         equipos: selectedEquipos,
       });
       resetForm();
-    } catch (err: any) {
-      // El error ya se muestra via Snackbar en el padre
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear pedido');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Typography variant="h6">Datos del Pedido</Typography>
 
       {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
 
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-        <TextField label="Fecha" type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} required sx={{ minWidth: 180 }} />
-        <TextField label="Hora Inicio" placeholder="08:00" value={form.horaInicio} onChange={(e) => setForm({ ...form, horaInicio: e.target.value })} required sx={{ minWidth: 140 }} />
-        <TextField label="Hora Fin" placeholder="10:00" value={form.horaFin} onChange={(e) => setForm({ ...form, horaFin: e.target.value })} required sx={{ minWidth: 140 }} />
-        <TextField label="Cant. Alumnos" type="number" value={form.cantidadAlumnos} onChange={(e) => setForm({ ...form, cantidadAlumnos: Number(e.target.value) })} required sx={{ minWidth: 140 }} slotProps={{ htmlInput: { min: 1 } }} />
+        <TextField label="Fecha" type="date" {...register('fecha', { required: true })} slotProps={{ inputLabel: { shrink: true } }} error={!!errors.fecha} required sx={{ minWidth: 180 }} />
+        <TextField label="Hora Inicio" placeholder="08:00" {...register('horaInicio', { required: true })} error={!!errors.horaInicio} required sx={{ minWidth: 140 }} />
+        <TextField label="Hora Fin" placeholder="10:00" {...register('horaFin', { required: true })} error={!!errors.horaFin} required sx={{ minWidth: 140 }} />
+        <TextField label="Cant. Alumnos" type="number" {...register('cantidadAlumnos', { valueAsNumber: true, min: { value: 1, message: 'Mínimo 1' } })} error={!!errors.cantidadAlumnos} helperText={errors.cantidadAlumnos?.message} required sx={{ minWidth: 140 }} />
       </Box>
 
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
-        <FormControl fullWidth required>
-          <InputLabel>Laboratorio</InputLabel>
-          <Select value={form.laboratorioId} label="Laboratorio" onChange={(e) => setForm({ ...form, laboratorioId: e.target.value })}>
-            {laboratorios.map((lab) => <MenuItem key={lab.id} value={lab.id}>{lab.nombre} (Cap: {lab.capacidad})</MenuItem>)}
-          </Select>
-        </FormControl>
+        <Controller
+          name="laboratorioId"
+          control={control}
+          rules={{ required: true }}
+          render={({ field }) => (
+            <FormControl fullWidth required error={!!errors.laboratorioId}>
+              <InputLabel>Laboratorio</InputLabel>
+              <Select {...field} label="Laboratorio">
+                {laboratorios.map((lab) => <MenuItem key={lab.id} value={lab.id}>{lab.nombre} (Cap: {lab.capacidad})</MenuItem>)}
+              </Select>
+            </FormControl>
+          )}
+        />
         {onRefreshLabs && (
           <Tooltip title="Recargar laboratorios">
             <IconButton onClick={onRefreshLabs} size="small" sx={{ mb: 0.5 }}>

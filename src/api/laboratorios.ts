@@ -1,7 +1,7 @@
-const API_URL = "http://localhost:3001/api";
+import { API_URL } from './config';
 
 export async function getLaboratorios() {
-  const response = await fetch("http://localhost:3001/api/laboratorios");
+  const response = await fetch(`${API_URL}/laboratorios?_t=${Date.now()}`);
   if (!response.ok) throw new Error("Error obteniendo laboratorios");
   
   const result = await response.json();
@@ -9,7 +9,7 @@ export async function getLaboratorios() {
   return result.data || []; 
 }
 
-export async function createLaboratorio(laboratorio: any) {
+export async function createLaboratorio(laboratorio: Record<string, any>) {
   const response = await fetch(`${API_URL}/laboratorios`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

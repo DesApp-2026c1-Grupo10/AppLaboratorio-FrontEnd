@@ -22,8 +22,8 @@ export default function AgendaDiaria({ pedidos }: Props) {
         {pedidos.map((pedido) => (
           <ListItem key={pedido.id}>
             <ListItemText
-              primary={`${pedido.horario} - ${pedido.laboratorioNombre}`}
-              secondary={`Alumnos: ${pedido.alumnos} | Estado: ${pedido.estado}`}
+              primary={`${pedido.horaInicio} - ${pedido.horaFin} - ${pedido.Laboratorio?.nombre || 'Sin laboratorio'}`}
+              secondary={`Alumnos: ${pedido.cantidadAlumnos} | Estado: ${pedido.estado}`}
             />
           </ListItem>
         ))}

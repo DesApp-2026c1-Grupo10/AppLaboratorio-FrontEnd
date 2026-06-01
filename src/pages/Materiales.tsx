@@ -2,65 +2,67 @@ import { useEffect, useState } from 'react';
 import {
   Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
   TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions,
-  IconButton, Chip, Snackbar, Alert, TableSortLabel,
+  IconButton, Chip, Snackbar, Alert, TablePagination,
 } from '@mui/material';
+import type { SnackbarState } from '../types/snackbar';
+import TableSkeleton from '../components/TableSkeleton';
 import { useNavigate } from 'react-router-dom';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
+import MaterialDialog from '../components/materiales/MaterialDialog';
 import { getMateriales, createMaterial, updateMaterial, deleteMaterial } from '../api/materiales';
 import { getLaboratorios } from '../api/laboratorios';
 import type { Material } from '../types/material';
+import type { Laboratorio } from '../types/laboratorio';
 import '../styles/inventario.css';
 
 export default function Materiales() {
   const navigate = useNavigate();
   const [materiales, setMateriales] = useState<Material[]>([]);
-  const [laboratorios, setLaboratorios] = useState<any[]>([]);
+  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<number | null>(null);
-  const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
+  const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
   const [editing, setEditing] = useState<Material | null>(null);
-  const [form, setForm] = useState({ name: '', descripcion: '', stock: 0, stockMinimo: 0, unit: '', laboratorioId: '' });
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    Promise.all([getMateriales(), getLaboratorios()])
-      .then(([matData, labData]) => {
-        setMateriales(matData);
-        setLaboratorios(labData);
-      })
-      .catch(() => setSnackbar({ msg: 'Error cargando datos', severity: 'error' }))
-      .finally(() => setLoading(false));
+    getLaboratorios().then(setLaboratorios).catch(console.error);
   }, []);
 
-  const filtered = materiales
-    .filter((m) => !search || m.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => sortDir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const result = await getMateriales(search || undefined, page + 1, rowsPerPage);
+        setMateriales(Array.isArray(result) ? result : (result?.data ?? []));
+        setTotal(Array.isArray(result) ? result.length : (result?.total ?? 0));
+      } catch {
+        setSnackbar({ msg: 'Error cargando datos', severity: 'error' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [search, page, rowsPerPage]);
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', descripcion: '', stock: 0, stockMinimo: 0, unit: '', laboratorioId: '' });
     setDialogOpen(true);
   };
 
   const openEdit = (m: Material) => {
     setEditing(m);
-    setForm({
-      name: m.name, descripcion: m.descripcion || '', stock: m.stock,
-      stockMinimo: m.stockMinimo, unit: m.unit || '', laboratorioId: String(m.laboratorioId || ''),
-    });
     setDialogOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!form.name.trim()) {
-      setSnackbar({ msg: 'El nombre es obligatorio', severity: 'error' });
-      return;
-    }
+  const handleSave = async (data: Record<string, any>) => {
     try {
-      const payload = { ...form, stock: Number(form.stock), stockMinimo: Number(form.stockMinimo), laboratorioId: form.laboratorioId ? Number(form.laboratorioId) : null };
+      const payload = { ...data, stock: Number(data.stock), stockMinimo: Number(data.stockMinimo), laboratorioId: data.laboratorioId ? Number(data.laboratorioId) : null };
       if (editing) {
         const updated = await updateMaterial(editing.id, payload);
         setMateriales((prev) => prev.map((m) => (m.id === editing.id ? updated : m)));
@@ -71,8 +73,8 @@ export default function Materiales() {
         setSnackbar({ msg: 'Material creado', severity: 'success' });
       }
       setDialogOpen(false);
-    } catch (err: any) {
-      setSnackbar({ msg: err.message, severity: 'error' });
+    } catch (err) {
+      setSnackbar({ msg: err instanceof Error ? err.message : 'Error', severity: 'error' });
     }
   };
 
@@ -104,9 +106,7 @@ export default function Materiales() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>
-                  <TableSortLabel active direction={sortDir} onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}>Nombre</TableSortLabel>
-                </TableCell>
+                <TableCell>Nombre</TableCell>
                 <TableCell>Descripción</TableCell>
                 <TableCell>Stock</TableCell>
                 <TableCell>Stock Mínimo</TableCell>
@@ -116,11 +116,11 @@ export default function Materiales() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={7} align="center"><CircularProgress size={30} /></TableCell></TableRow>
-              ) : filtered.length === 0 ? (
+               {loading ? (
+                <TableSkeleton columns={7} rows={5} />
+              ) : materiales.length === 0 ? (
                 <TableRow><TableCell colSpan={7} align="center">No hay materiales</TableCell></TableRow>
-              ) : filtered.map((m) => (
+              ) : materiales.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell>{m.name}</TableCell>
                   <TableCell>{m.descripcion || '-'}</TableCell>
@@ -139,29 +139,26 @@ export default function Materiales() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination
+            component="div"
+            count={total}
+            page={page}
+            onPageChange={(_, p) => setPage(p)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+            labelRowsPerPage="Filas por página:"
+            labelDisplayedRows={({ from, to, count }) => count !== 0 ? `${from}–${to} de ${count} materiales` : '0 resultados'}
+          />
         </Box>
       </Box>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editing ? 'Editar Material' : 'Nuevo Material'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField label="Nombre *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} fullWidth />
-            <TextField label="Descripción" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} fullWidth multiline rows={2} />
-            <TextField label="Stock" type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} fullWidth />
-            <TextField label="Stock Mínimo" type="number" value={form.stockMinimo} onChange={(e) => setForm({ ...form, stockMinimo: Number(e.target.value) })} fullWidth />
-            <TextField label="Unidad" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} fullWidth />
-            <TextField label="Laboratorio" select value={form.laboratorioId} onChange={(e) => setForm({ ...form, laboratorioId: e.target.value })} fullWidth slotProps={{ select: { native: true } }}>
-              <option value="">Sin laboratorio</option>
-              {laboratorios.map((l: any) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
-            </TextField>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave}>Guardar</Button>
-        </DialogActions>
-      </Dialog>
+      <MaterialDialog
+        open={dialogOpen}
+        editing={editing}
+        laboratorios={laboratorios}
+        onSave={handleSave}
+        onClose={() => setDialogOpen(false)}
+      />
 
       <Dialog open={deleteDialog !== null} onClose={() => setDeleteDialog(null)}>
         <DialogTitle>¿Eliminar material?</DialogTitle>

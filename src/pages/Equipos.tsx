@@ -2,14 +2,18 @@ import { useEffect, useState } from 'react';
 import {
   Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
   TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions,
-  IconButton, Chip, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel,
+  IconButton, Chip, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel, TablePagination,
 } from '@mui/material';
+import type { SnackbarState } from '../types/snackbar';
+import TableSkeleton from '../components/TableSkeleton';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
+import EquipoDialog from '../components/equipos/EquipoDialog';
 import { getEquipos, createEquipo, updateEquipo, deleteEquipo } from '../api/equipos';
 import { getUsos } from '../api/usos';
 import { getLaboratorios } from '../api/laboratorios';
 import type { Equipo, UsoEquipo } from '../types/equipo';
+import type { Laboratorio } from '../types/laboratorio';
 import '../styles/inventario.css';
 
 const statusColor: Record<string, 'success' | 'info' | 'warning' | 'error'> = {
@@ -18,7 +22,7 @@ const statusColor: Record<string, 'success' | 'info' | 'warning' | 'error'> = {
 
 export default function Equipos() {
   const [equipos, setEquipos] = useState<Equipo[]>([]);
-  const [laboratorios, setLaboratorios] = useState<any[]>([]);
+  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([]);
   const [search, setSearch] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('');
   const [loading, setLoading] = useState(true);
@@ -26,35 +30,39 @@ export default function Equipos() {
   const [deleteDialog, setDeleteDialog] = useState<number | null>(null);
   const [historialOpen, setHistorialOpen] = useState(false);
   const [historialUsos, setHistorialUsos] = useState<UsoEquipo[]>([]);
-  const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
+  const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
   const [editing, setEditing] = useState<Equipo | null>(null);
-  const [form, setForm] = useState({ name: '', descripcion: '', status: 'Disponible', is_movable: false, bld_id: '', laboratorioId: '', ultimaRevision: '', observaciones: '' });
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    Promise.all([getEquipos(), getLaboratorios()])
-      .then(([eData, lData]) => { setEquipos(eData); setLaboratorios(lData); })
-      .catch(() => setSnackbar({ msg: 'Error cargando datos', severity: 'error' }))
-      .finally(() => setLoading(false));
+    getLaboratorios().then(setLaboratorios).catch(console.error);
   }, []);
 
-  const filtered = equipos
-    .filter((e) => !search || e.name.toLowerCase().includes(search.toLowerCase()))
-    .filter((e) => !estadoFilter || e.status === estadoFilter);
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const result = await getEquipos(search || undefined, estadoFilter || undefined, page + 1, rowsPerPage);
+        setEquipos(Array.isArray(result) ? result : (result?.data ?? []));
+        setTotal(Array.isArray(result) ? result.length : (result?.total ?? 0));
+      } catch {
+        setSnackbar({ msg: 'Error cargando datos', severity: 'error' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [search, estadoFilter, page, rowsPerPage]);
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', descripcion: '', status: 'Disponible', is_movable: false, bld_id: '', laboratorioId: '', ultimaRevision: '', observaciones: '' });
     setDialogOpen(true);
   };
 
   const openEdit = (e: Equipo) => {
     setEditing(e);
-    setForm({
-      name: e.name, descripcion: e.descripcion || '', status: e.status,
-      is_movable: e.is_movable, bld_id: String(e.bld_id || ''),
-      laboratorioId: String(e.laboratorioId || ''),
-      ultimaRevision: e.ultimaRevision || '', observaciones: e.observaciones || '',
-    });
     setDialogOpen(true);
   };
 
@@ -66,14 +74,13 @@ export default function Equipos() {
     } catch { setSnackbar({ msg: 'Error cargando historial', severity: 'error' }); }
   };
 
-  const handleSave = async () => {
-    if (!form.name.trim()) { setSnackbar({ msg: 'El nombre es obligatorio', severity: 'error' }); return; }
+  const handleSave = async (data: Record<string, any>) => {
     try {
       const payload = {
-        ...form, is_movable: Boolean(form.is_movable),
-        bld_id: form.bld_id ? Number(form.bld_id) : null,
-        laboratorioId: form.laboratorioId ? Number(form.laboratorioId) : null,
-        ultimaRevision: form.ultimaRevision || null, observaciones: form.observaciones || null,
+        ...data, is_movable: data.is_movable === 'true',
+        bld_id: data.bld_id ? Number(data.bld_id) : null,
+        laboratorioId: data.laboratorioId ? Number(data.laboratorioId) : null,
+        ultimaRevision: data.ultimaRevision || null, observaciones: data.observaciones || null,
       };
       if (editing) {
         const updated = await updateEquipo(editing.id, payload);
@@ -85,7 +92,7 @@ export default function Equipos() {
         setSnackbar({ msg: 'Equipo creado', severity: 'success' });
       }
       setDialogOpen(false);
-    } catch (err: any) { setSnackbar({ msg: err.message, severity: 'error' }); }
+    } catch (err) { setSnackbar({ msg: err instanceof Error ? err.message : 'Error', severity: 'error' }); }
   };
 
   const handleDelete = async (id: number) => {
@@ -134,9 +141,9 @@ export default function Equipos() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? <TableRow><TableCell colSpan={7} align="center"><CircularProgress size={30} /></TableCell></TableRow>
-              : filtered.length === 0 ? <TableRow><TableCell colSpan={7} align="center">No hay equipos</TableCell></TableRow>
-              : filtered.map((eq) => (
+              {loading ? <TableSkeleton columns={7} rows={5} />
+              : equipos.length === 0 ? <TableRow><TableCell colSpan={7} align="center">No hay equipos</TableCell></TableRow>
+              : equipos.map((eq) => (
                 <TableRow key={eq.id}>
                   <TableCell>{eq.name}</TableCell>
                   <TableCell><Chip label={eq.status} color={statusColor[eq.status] || 'default'} size="small" /></TableCell>
@@ -153,46 +160,26 @@ export default function Equipos() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination
+            component="div"
+            count={total}
+            page={page}
+            onPageChange={(_, p) => setPage(p)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+            labelRowsPerPage="Filas por página:"
+            labelDisplayedRows={({ from, to, count }) => count !== 0 ? `${from}–${to} de ${count} equipos` : '0 resultados'}
+          />
         </Box>
       </Box>
 
-      {/* Form Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editing ? 'Editar Equipo' : 'Nuevo Equipo'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField label="Nombre *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} fullWidth />
-            <TextField label="Descripción" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} fullWidth multiline rows={2} />
-            <FormControl fullWidth>
-              <InputLabel>Estado</InputLabel>
-              <Select value={form.status} label="Estado" onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                <MenuItem value="Disponible">Disponible</MenuItem>
-                <MenuItem value="En uso">En uso</MenuItem>
-                <MenuItem value="Mantenimiento">Mantenimiento</MenuItem>
-                <MenuItem value="Fuera de servicio">Fuera de servicio</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField label="Edificio (bld_id)" type="number" value={form.bld_id} onChange={(e) => setForm({ ...form, bld_id: e.target.value })} fullWidth />
-            <TextField label="Laboratorio" select value={form.laboratorioId} onChange={(e) => setForm({ ...form, laboratorioId: e.target.value })} fullWidth slotProps={{ select: { native: true } }}>
-              <option value="">Sin laboratorio</option>
-              {laboratorios.map((l: any) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
-            </TextField>
-            <FormControl fullWidth>
-              <InputLabel>¿Es movible?</InputLabel>
-              <Select value={form.is_movable ? 'true' : 'false'} label="¿Es movible?" onChange={(e) => setForm({ ...form, is_movable: e.target.value === 'true' })}>
-                <MenuItem value="true">Sí</MenuItem>
-                <MenuItem value="false">No</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField label="Última Revisión" type="date" value={form.ultimaRevision} onChange={(e) => setForm({ ...form, ultimaRevision: e.target.value })} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField label="Observaciones" value={form.observaciones} onChange={(e) => setForm({ ...form, observaciones: e.target.value })} fullWidth multiline rows={2} />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave}>Guardar</Button>
-        </DialogActions>
-      </Dialog>
+      <EquipoDialog
+        open={dialogOpen}
+        editing={editing}
+        laboratorios={laboratorios}
+        onSave={handleSave}
+        onClose={() => setDialogOpen(false)}
+      />
 
       {/* Historial Dialog */}
       <Dialog open={historialOpen} onClose={() => setHistorialOpen(false)} maxWidth="md" fullWidth>

@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Snackbar, Alert, Box, CircularProgress, Typography } from '@mui/material';
+import { Snackbar, Alert, Box, CircularProgress } from '@mui/material';
+import type { SnackbarState } from '../types/snackbar';
 
 import PedidoForm from '../components/pedidos/PedidoForm';
 import PedidoTable from '../components/pedidos/PedidoTable';
 import FinalizarDialog from '../components/pedidos/FinalizarDialog';
-import { getPedidos, createPedido, updatePedido, finalizarPedido, getHistorialPedido } from '../api/pedidos';
+import { getPedidos, createPedido, aprobarPedido, rechazarPedido, finalizarPedido } from '../api/pedidos';
 import { getLaboratorios } from '../api/laboratorios';
 import type { Pedido } from '../types/pedido';
+import type { Laboratorio } from '../types/laboratorio';
 import AppLayout from '../components/layout/AppLayout';
 import "../styles/pedidos.css";
 
 export default function Pedidos() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [laboratorios, setLaboratorios] = useState([]);
-  const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
+  const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([]);
+  const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
   const [loading, setLoading] = useState(true);
   const [pedidoToFinalize, setPedidoToFinalize] = useState<Pedido | null>(null);
 
@@ -56,29 +58,29 @@ export default function Pedidos() {
       const nuevoPedido = await createPedido(pedidoConUsuario);
       setPedidos([...pedidos, nuevoPedido]);
       setSnackbar({ msg: '¡Pedido creado con éxito!', severity: 'success' });
-    } catch (error: any) {
-      setSnackbar({ msg: 'No se pudo crear: ' + error.message, severity: 'error' });
+    } catch (error) {
+      setSnackbar({ msg: 'No se pudo crear: ' + (error instanceof Error ? error.message : 'Error desconocido'), severity: 'error' });
       throw error;
     }
   };
 
   const aceptarPedido = async (id: number) => {
     try {
-      const pedidoActualizado = await updatePedido(id, { estado: "Aprobado" });
+      const pedidoActualizado = await aprobarPedido(id);
       setPedidos((prev) => prev.map((p) => p.id === id ? { ...p, ...pedidoActualizado } : p));
       setSnackbar({ msg: 'Pedido aprobado correctamente', severity: 'success' });
     } catch (error) {
-      setSnackbar({ msg: 'Error al aprobar pedido', severity: 'error' });
+      setSnackbar({ msg: error instanceof Error ? error.message : 'Error al aprobar pedido', severity: 'error' });
     }
   };
 
-  const rechazarPedido = async (id: number) => {
+  const rechazar = async (id: number) => {
     try {
-      const pedidoActualizado = await updatePedido(id, { estado: "Rechazado" });
+      const pedidoActualizado = await rechazarPedido(id);
       setPedidos((prev) => prev.map((p) => p.id === id ? { ...p, ...pedidoActualizado } : p));
       setSnackbar({ msg: 'Pedido rechazado', severity: 'success' });
     } catch (error) {
-      setSnackbar({ msg: 'Error al rechazar pedido', severity: 'error' });
+      setSnackbar({ msg: error instanceof Error ? error.message : 'Error al rechazar pedido', severity: 'error' });
     }
   };
 
@@ -138,7 +140,7 @@ export default function Pedidos() {
               <PedidoTable
                 pedidos={pedidos}
                 aceptarPedido={aceptarPedido}
-                rechazarPedido={rechazarPedido}
+                rechazarPedido={rechazar}
                 finalizarPedido={handleFinalizarClick}
                 esAdmin={esAdmin}
               />

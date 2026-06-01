@@ -1,7 +1,7 @@
-const API_URL = 'http://localhost:3001/api';
+import { API_URL } from './config';
 
 export async function getEstadisticasResumen() {
-  const response = await fetch(`${API_URL}/estadisticas`);
+  const response = await fetch(`${API_URL}/estadisticas?_t=${Date.now()}`);
   if (!response.ok) throw new Error('Error obteniendo estadísticas');
   const result = await response.json();
   return result.data;

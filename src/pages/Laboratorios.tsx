@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getLaboratorios, createLaboratorio } from "../api/laboratorios";
 import { Box, CircularProgress, TextField, Button, Snackbar, Alert, Accordion, AccordionSummary, AccordionDetails, Typography } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import type { SnackbarState } from "../types/snackbar";
 import type { Laboratorio } from "../types/laboratorio";
 import "../styles/laboratorio.css";
 import AppLayout from "../components/layout/AppLayout";
@@ -13,7 +14,7 @@ export default function Laboratorios() {
   const [nombre, setNombre] = useState("");
   const [capacidad, setCapacidad] = useState(0);
   const [edificio, setEdificio] = useState("");
-  const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
+  const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
 
   useEffect(() => { loadLaboratorios(); }, []);
 

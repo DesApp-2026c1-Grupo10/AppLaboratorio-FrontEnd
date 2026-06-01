@@ -1,8 +1,8 @@
-const API_URL = 'http://localhost:3001/api/inventario';
+import { API_URL } from './config';
 
 export async function getUsos(equipoId?: number) {
-  const params = equipoId ? `?equipoId=${equipoId}` : '';
-  const res = await fetch(`${API_URL}/usos${params}`);
+  const params = equipoId ? `?equipoId=${equipoId}&_t=${Date.now()}` : `?_t=${Date.now()}`;
+  const res = await fetch(`${API_URL}/inventario/usos${params}`);
   if (!res.ok) throw new Error('Error obteniendo usos de equipo');
   const result = await res.json();
   return result.data || [];
@@ -15,7 +15,7 @@ export async function createUso(data: {
   fechaFin?: string;
   observaciones?: string;
 }) {
-  const res = await fetch(`${API_URL}/usos`, {
+  const res = await fetch(`${API_URL}/inventario/usos`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -26,7 +26,7 @@ export async function createUso(data: {
 }
 
 export async function finalizarUso(id: number) {
-  const res = await fetch(`${API_URL}/usos/${id}/finalizar`, { method: 'PUT' });
+  const res = await fetch(`${API_URL}/inventario/usos/${id}/finalizar`, { method: 'PUT' });
   if (!res.ok) throw new Error('Error finalizando uso');
   const result = await res.json();
   return result.data;

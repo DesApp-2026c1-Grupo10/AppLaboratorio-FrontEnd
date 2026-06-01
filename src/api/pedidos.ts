@@ -1,20 +1,21 @@
-const API_URL = 'http://localhost:3001/api';
+import { API_URL } from './config';
+import type { Pedido } from '../types/pedido';
 
-export async function getPedidos() {
-  const response = await fetch(`${API_URL}/pedidos`);
+export async function getPedidos(): Promise<Pedido[]> {
+  const response = await fetch(`${API_URL}/pedidos?_t=${Date.now()}`);
   if (!response.ok) throw new Error('Error obteniendo pedidos');
   const result = await response.json();
   return result.data || [];
 }
 
-export async function getPedido(id: number) {
-  const response = await fetch(`${API_URL}/pedidos/${id}`);
+export async function getPedido(id: number): Promise<Pedido> {
+  const response = await fetch(`${API_URL}/pedidos/${id}?_t=${Date.now()}`);
   if (!response.ok) throw new Error('Error obteniendo pedido');
   const result = await response.json();
   return result.data;
 }
 
-export async function createPedido(pedido: any) {
+export async function createPedido(pedido: Record<string, any>): Promise<Pedido> {
   const response = await fetch(`${API_URL}/pedidos`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -25,7 +26,7 @@ export async function createPedido(pedido: any) {
   return result.data;
 }
 
-export async function updatePedido(id: number, data: any) {
+export async function updatePedido(id: number, data: Record<string, any>): Promise<Pedido> {
   const response = await fetch(`${API_URL}/pedidos/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -36,7 +37,7 @@ export async function updatePedido(id: number, data: any) {
   return result.data;
 }
 
-export async function aprobarPedido(id: number) {
+export async function aprobarPedido(id: number): Promise<Pedido> {
   const response = await fetch(`${API_URL}/pedidos/${id}/aprobar`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -46,7 +47,7 @@ export async function aprobarPedido(id: number) {
   return result.data;
 }
 
-export async function rechazarPedido(id: number) {
+export async function rechazarPedido(id: number): Promise<Pedido> {
   const response = await fetch(`${API_URL}/pedidos/${id}/rechazar`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -61,7 +62,7 @@ export async function finalizarPedido(id: number, data: {
   materiales?: { id: number; cantidad: number }[];
   reactivos?: { id: number; cantidad: number }[];
   equipos?: { id: number; estado: string }[];
-}) {
+}): Promise<Pedido> {
   const response = await fetch(`${API_URL}/pedidos/${id}/finalizar`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -72,8 +73,8 @@ export async function finalizarPedido(id: number, data: {
   return result.data;
 }
 
-export async function getHistorialPedido(id: number) {
-  const response = await fetch(`${API_URL}/pedidos/${id}/historial`);
+export async function getHistorialPedido(id: number): Promise<any[]> {
+  const response = await fetch(`${API_URL}/pedidos/${id}/historial?_t=${Date.now()}`);
   if (!response.ok) throw new Error('Error obteniendo historial');
   const result = await response.json();
   return result.data || [];
