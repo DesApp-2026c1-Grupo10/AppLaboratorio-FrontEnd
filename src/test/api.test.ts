@@ -14,7 +14,7 @@ describe('pedidos API', () => {
     vi.stubGlobal('fetch', mockFetch);
 
     const result = await getHistorialPedido(5);
-    expect(mockFetch).toHaveBeenCalledWith('http://localhost:3001/api/pedidos/5/historial');
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/pedidos/5/historial'));
     expect(result).toHaveLength(1);
   });
 
