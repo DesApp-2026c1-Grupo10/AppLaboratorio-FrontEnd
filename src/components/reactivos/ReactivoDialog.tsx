@@ -17,7 +17,7 @@ interface ReactivoDialogProps {
 
 export default function ReactivoDialog({ open, editing, laboratorios, onSave, onClose }: ReactivoDialogProps) {
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
-    defaultValues: { name: '', descripcion: '', stock: 0, unidadMedida: '', vencimiento: '', prep_time: 0, laboratorioId: '' },
+    defaultValues: { name: '', descripcion: '', stock: 0, stockMinimo: 0, unidadMedida: '', vencimiento: '', prep_time: 0, laboratorioId: '' },
   });
 
   useEffect(() => {
@@ -25,11 +25,11 @@ export default function ReactivoDialog({ open, editing, laboratorios, onSave, on
       if (editing) {
         reset({
           name: editing.name, descripcion: editing.descripcion || '', stock: editing.stock,
-          unidadMedida: editing.unidadMedida || '', vencimiento: editing.vencimiento || '',
+          stockMinimo: editing.stockMinimo, unidadMedida: editing.unidadMedida || '', vencimiento: editing.vencimiento || '',
           prep_time: editing.prep_time, laboratorioId: String(editing.laboratorioId || ''),
         });
       } else {
-        reset({ name: '', descripcion: '', stock: 0, unidadMedida: '', vencimiento: '', prep_time: 0, laboratorioId: '' });
+        reset({ name: '', descripcion: '', stock: 0, stockMinimo: 0, unidadMedida: '', vencimiento: '', prep_time: 0, laboratorioId: '' });
       }
     }
   }, [open, editing, reset]);
@@ -43,6 +43,7 @@ export default function ReactivoDialog({ open, editing, laboratorios, onSave, on
             <TextField label="Nombre *" {...register('name', { required: 'El nombre es obligatorio' })} error={!!errors.name} helperText={errors.name?.message} fullWidth />
             <TextField label="Descripción" {...register('descripcion')} fullWidth multiline rows={2} />
             <TextField label="Stock" type="number" {...register('stock', { valueAsNumber: true, min: { value: 0, message: 'No puede ser negativo' } })} error={!!errors.stock} helperText={errors.stock?.message} fullWidth />
+            <TextField label="Stock Mínimo" type="number" {...register('stockMinimo', { valueAsNumber: true, min: { value: 0, message: 'No puede ser negativo' } })} error={!!errors.stockMinimo} helperText={errors.stockMinimo?.message} fullWidth />
             <TextField label="Unidad de Medida" {...register('unidadMedida')} fullWidth />
             <TextField label="Vencimiento" type="date" {...register('vencimiento')} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
             <TextField label="Tiempo de Preparación (min)" type="number" {...register('prep_time', { valueAsNumber: true, min: { value: 0, message: 'No puede ser negativo' } })} error={!!errors.prep_time} helperText={errors.prep_time?.message} fullWidth />

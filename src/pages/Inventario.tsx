@@ -15,6 +15,7 @@ import { getReactivos } from '../api/reactivos';
 import { getEquipos } from '../api/equipos';
 import { getMovimientos } from '../api/movimientos';
 import type { Material } from '../types/material';
+import type { Reactivo } from '../types/reactivo';
 import type { Equipo } from '../types/equipo';
 import type { MovimientoStock } from '../types/movimiento';
 import '../styles/inventario.css';
@@ -22,7 +23,7 @@ import '../styles/inventario.css';
 export default function Inventario() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ materiales: 0, reactivos: 0, equipos: 0 });
-  const [stockBajo, setStockBajo] = useState<Material[]>([]);
+  const [stockBajo, setStockBajo] = useState<(Material | Reactivo)[]>([]);
   const [enMantenimiento, setEnMantenimiento] = useState<Equipo[]>([]);
   const [ultimosMovimientos, setUltimosMovimientos] = useState<MovimientoStock[]>([]);
 
@@ -39,7 +40,9 @@ export default function Inventario() {
         getMovimientos(),
       ]);
       setStats({ materiales: materiales.length, reactivos: reactivos.length, equipos: equipos.length });
-      setStockBajo(materiales.filter((m) => m.stockMinimo > 0 && m.stock <= m.stockMinimo));
+      const matsBajo = materiales.filter((m) => m.stockMinimo > 0 && m.stock <= m.stockMinimo);
+      const reactivosBajo = reactivos.filter((r) => r.stockMinimo > 0 && r.stock <= r.stockMinimo);
+      setStockBajo([...matsBajo, ...reactivosBajo]);
       setEnMantenimiento(equipos.filter((e) => e.status === 'Mantenimiento'));
       setUltimosMovimientos(movimientos.slice(0, 5));
     } catch (error) {
@@ -98,12 +101,12 @@ export default function Inventario() {
                 <Typography variant="h6">Stock Bajo</Typography>
               </Box>
               {stockBajo.length === 0 ? (
-                <Typography color="text.secondary">No hay materiales con stock bajo</Typography>
+                <Typography color="text.secondary">No hay materiales o reactivos con stock bajo</Typography>
               ) : (
-                stockBajo.map((m) => (
-                  <Box key={m.id} className="alerta-item">
-                    <Typography><strong>{m.name}</strong></Typography>
-                    <Chip label={`Stock: ${m.stock} / Mín: ${m.stockMinimo}`} color="warning" size="small" />
+                stockBajo.map((item) => (
+                  <Box key={`${'stockMinimo' in item ? 'mat' : 'rea'}-${item.id}`} className="alerta-item">
+                    <Typography><strong>{item.name}</strong></Typography>
+                    <Chip label={`Stock: ${item.stock} / Mín: ${item.stockMinimo}`} color="warning" size="small" />
                   </Box>
                 ))
               )}

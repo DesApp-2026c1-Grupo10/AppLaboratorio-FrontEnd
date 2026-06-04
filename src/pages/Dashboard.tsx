@@ -11,6 +11,7 @@ import { formatTime } from '../utils/format';
 import { getLaboratorios } from "../api/laboratorios";
 import { getPedidos } from "../api/pedidos";
 import { getMateriales } from "../api/materiales";
+import { getReactivos } from "../api/reactivos";
 import { getEquipos } from "../api/equipos";
 import AppLayout from "../components/layout/AppLayout";
 import type { Laboratorio } from '../types/laboratorio';
@@ -33,12 +34,14 @@ export default function Dashboard() {
 
   async function loadDashboard() {
     try {
-      const [labs, pedidosData, mats, eqs] = await Promise.all([
-        getLaboratorios(), getPedidos(), getMateriales(), getEquipos(),
+      const [labs, pedidosData, mats, reactivos, eqs] = await Promise.all([
+        getLaboratorios(), getPedidos(), getMateriales(), getReactivos(), getEquipos(),
       ]);
       setLaboratorios(labs);
       setPedidos(pedidosData);
-      setStockBajo(mats.filter((m) => m.stockMinimo > 0 && m.stock <= m.stockMinimo).length);
+      const matsBajo = mats.filter((m) => m.stockMinimo > 0 && m.stock <= m.stockMinimo).length;
+      const reactivosBajo = reactivos.filter((r) => r.stockMinimo > 0 && r.stock <= r.stockMinimo).length;
+      setStockBajo(matsBajo + reactivosBajo);
       setEquiposMantenimiento(eqs.filter((e) => e.status === 'Mantenimiento').length);
     } catch (error) {
       console.error(error);

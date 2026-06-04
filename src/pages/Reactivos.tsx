@@ -64,7 +64,7 @@ export default function Reactivos() {
   const handleSave = async (data: Record<string, any>) => {
     try {
       const payload = {
-        ...data, stock: Number(data.stock), prep_time: Number(data.prep_time),
+        ...data, stock: Number(data.stock), stockMinimo: Number(data.stockMinimo), prep_time: Number(data.prep_time),
         vencimiento: data.vencimiento || null,
         laboratorioId: data.laboratorioId ? Number(data.laboratorioId) : null,
       };
@@ -126,7 +126,7 @@ export default function Reactivos() {
                 <TableRow key={r.id}>
                   <TableCell>{r.name}</TableCell>
                   <TableCell>
-                    <Chip label={r.stock} color={r.stock <= 0 ? 'error' : 'default'} size="small" />
+                    <Chip label={r.stock} color={r.stockMinimo > 0 && r.stock <= r.stockMinimo ? 'warning' : r.stock <= 0 ? 'error' : 'default'} size="small" />
                   </TableCell>
                   <TableCell>{r.unidadMedida || '-'}</TableCell>
                   <TableCell>
