@@ -37,20 +37,22 @@ export async function updatePedido(id: number, data: Record<string, any>): Promi
   return result.data;
 }
 
-export async function aprobarPedido(id: number): Promise<Pedido> {
+export async function aprobarPedido(id: number, usuarioId?: number): Promise<Pedido> {
   const response = await fetch(`${API_URL}/pedidos/${id}/aprobar`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
+    body: usuarioId ? JSON.stringify({ usuarioId }) : undefined,
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || 'Error aprobando pedido');
   return result.data;
 }
 
-export async function rechazarPedido(id: number): Promise<Pedido> {
+export async function rechazarPedido(id: number, usuarioId?: number): Promise<Pedido> {
   const response = await fetch(`${API_URL}/pedidos/${id}/rechazar`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
+    body: usuarioId ? JSON.stringify({ usuarioId }) : undefined,
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || 'Error rechazando pedido');

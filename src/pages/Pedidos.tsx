@@ -66,7 +66,7 @@ export default function Pedidos() {
 
   const aceptarPedido = async (id: number) => {
     try {
-      const pedidoActualizado = await aprobarPedido(id);
+      const pedidoActualizado = await aprobarPedido(id, usuarioLogueado?.id);
       setPedidos((prev) => prev.map((p) => p.id === id ? { ...p, ...pedidoActualizado } : p));
       setSnackbar({ msg: 'Pedido aprobado correctamente', severity: 'success' });
     } catch (error) {
@@ -76,7 +76,7 @@ export default function Pedidos() {
 
   const rechazar = async (id: number) => {
     try {
-      const pedidoActualizado = await rechazarPedido(id);
+      const pedidoActualizado = await rechazarPedido(id, usuarioLogueado?.id);
       setPedidos((prev) => prev.map((p) => p.id === id ? { ...p, ...pedidoActualizado } : p));
       setSnackbar({ msg: 'Pedido rechazado', severity: 'success' });
     } catch (error) {
