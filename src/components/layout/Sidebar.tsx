@@ -17,6 +17,7 @@ import ScienceIcon from "@mui/icons-material/Science";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import BiotechIcon from "@mui/icons-material/Biotech";
 
 import {
   useNavigate,

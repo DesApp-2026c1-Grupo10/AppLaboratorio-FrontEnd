@@ -6,6 +6,7 @@ import Inventario from '../pages/Inventario';
 import Materiales from '../pages/Materiales';
 import Reactivos from '../pages/Reactivos';
 import Equipos from '../pages/Equipos';
+import SustanciasBasicas from '../pages/SustanciasBasicas';
 import Movimientos from '../pages/Movimientos';
 import Dashboard from '../pages/Dashboard';
 import Laboratorios from '../pages/Laboratorios';
@@ -44,6 +45,7 @@ export default function AppRouter() {
         <Route path="/reactivos" element={<RutaProtegida><Reactivos /></RutaProtegida>} />
         <Route path="/equipos" element={<RutaProtegida><Equipos /></RutaProtegida>} />
         <Route path="/movimientos" element={<RutaProtegida><Movimientos /></RutaProtegida>} />
+        <Route path="/sustancias-basicas" element={<RutaProtegida><SustanciasBasicas /></RutaProtegida>} />
         <Route path="/estadisticas" element={<RutaProtegida><Estadisticas /></RutaProtegida>} />
       </Routes>
     </BrowserRouter>

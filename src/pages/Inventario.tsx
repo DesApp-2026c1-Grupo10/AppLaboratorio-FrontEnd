@@ -9,21 +9,24 @@ import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturi
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import BuildCircleIcon from '@mui/icons-material/BuildCircle';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import BiotechIcon from '@mui/icons-material/Biotech';
 import AppLayout from '../components/layout/AppLayout';
 import { getMateriales } from '../api/materiales';
 import { getReactivos } from '../api/reactivos';
 import { getEquipos } from '../api/equipos';
 import { getMovimientos } from '../api/movimientos';
+import { getSustanciasBasicas } from '../api/sustanciasBasicas';
 import type { Material } from '../types/material';
 import type { Reactivo } from '../types/reactivo';
 import type { Equipo } from '../types/equipo';
 import type { MovimientoStock } from '../types/movimiento';
+import type { SustanciaBasica } from '../types/sustanciaBasica';
 import '../styles/inventario.css';
 
 export default function Inventario() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ materiales: 0, reactivos: 0, equipos: 0 });
-  const [stockBajo, setStockBajo] = useState<(Material | Reactivo)[]>([]);
+  const [stats, setStats] = useState({ materiales: 0, reactivos: 0, equipos: 0, sustancias: 0 });
+  const [stockBajo, setStockBajo] = useState<(Material | Reactivo | SustanciaBasica)[]>([]);
   const [enMantenimiento, setEnMantenimiento] = useState<Equipo[]>([]);
   const [ultimosMovimientos, setUltimosMovimientos] = useState<MovimientoStock[]>([]);
 
@@ -33,16 +36,18 @@ export default function Inventario() {
 
   async function loadData() {
     try {
-      const [materiales, reactivos, equipos, movimientos] = await Promise.all([
+      const [materiales, reactivos, equipos, movimientos, sustancias] = await Promise.all([
         getMateriales(),
         getReactivos(),
         getEquipos(),
         getMovimientos(),
+        getSustanciasBasicas(),
       ]);
-      setStats({ materiales: materiales.length, reactivos: reactivos.length, equipos: equipos.length });
+      setStats({ materiales: materiales.length, reactivos: reactivos.length, equipos: equipos.length, sustancias: sustancias.length });
       const matsBajo = materiales.filter((m) => m.stockMinimo > 0 && m.stock <= m.stockMinimo);
       const reactivosBajo = reactivos.filter((r) => r.stockMinimo > 0 && r.stock <= r.stockMinimo);
-      setStockBajo([...matsBajo, ...reactivosBajo]);
+      const sustanciasBajo = sustancias.filter((s) => s.stockMinimo > 0 && s.stock <= s.stockMinimo);
+      setStockBajo([...matsBajo, ...reactivosBajo, ...sustanciasBajo]);
       setEnMantenimiento(equipos.filter((e) => e.status === 'Mantenimiento'));
       setUltimosMovimientos(movimientos.slice(0, 5));
     } catch (error) {
@@ -81,6 +86,13 @@ export default function Inventario() {
                 <PrecisionManufacturingIcon sx={{ fontSize: 40, color: '#1976d2' }} />
                 <Typography variant="h3">{stats.equipos}</Typography>
                 <Typography color="text.secondary">Equipos</Typography>
+              </CardContent>
+            </Card>
+            <Card className="inv-stat-card" onClick={() => navigate('/sustancias-basicas')} sx={{ cursor: 'pointer' }}>
+              <CardContent>
+                <BiotechIcon sx={{ fontSize: 40, color: '#2e7d32' }} />
+                <Typography variant="h3">{stats.sustancias}</Typography>
+                <Typography color="text.secondary">Sustancias Básicas</Typography>
               </CardContent>
             </Card>
             <Card className="inv-stat-card" onClick={() => navigate('/movimientos')} sx={{ cursor: 'pointer' }}>

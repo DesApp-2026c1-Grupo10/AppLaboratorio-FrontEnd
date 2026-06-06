@@ -19,3 +19,14 @@ export async function createLaboratorio(laboratorio: Record<string, any>) {
   const result = await response.json();
   return result.data;
 }
+
+export async function updateLaboratorio(id: number, data: Record<string, any>) {
+  const response = await fetch(`${API_URL}/laboratorios/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error("Error actualizando laboratorio");
+  const result = await response.json();
+  return result.data;
+}

@@ -17,6 +17,17 @@ interface Props {
   onSubmitPedido: (data: Record<string, any>) => Promise<any>;
   laboratorios: Laboratorio[];
   onRefreshLabs?: () => void;
+  mode?: 'pedido' | 'actividad';
+  onSubmitActividad?: (data: Record<string, any>) => Promise<any>;
+  actividadInicial?: {
+    nombre?: string;
+    laboratorioId?: number;
+    cantidadAlumnos?: number;
+    descripcion?: string;
+    materiales?: { id: number; cantidad: number }[];
+    reactivos?: { id: number; cantidad: number }[];
+    equipos?: number[];
+  } | null;
 }
 
 interface ItemSeleccionado {
@@ -27,7 +38,7 @@ interface ItemSeleccionado {
   unidadMedida?: string;
 }
 
-export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs }: Props) {
+export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs, mode = 'pedido', onSubmitActividad, actividadInicial }: Props) {
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [reactivos, setReactivos] = useState<Reactivo[]>([]);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
@@ -39,7 +50,7 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
   const [submitting, setSubmitting] = useState(false);
 
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
-    defaultValues: { fecha: '', horaInicio: '', horaFin: '', laboratorioId: '', cantidadAlumnos: 1, descripcion: '' },
+    defaultValues: { nombre: '', fecha: '', horaInicio: '', horaFin: '', laboratorioId: '', cantidadAlumnos: 1, descripcion: '' },
   });
 
   useEffect(() => {
@@ -48,8 +59,32 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
       .catch(console.error);
   }, []);
 
+  useEffect(() => {
+    if (mode === 'actividad' && actividadInicial) {
+      reset({
+        nombre: actividadInicial.nombre || '',
+        laboratorioId: String(actividadInicial.laboratorioId || ''),
+        cantidadAlumnos: actividadInicial.cantidadAlumnos || 1,
+        descripcion: actividadInicial.descripcion || '',
+      });
+      setSelectedMaterials(
+        (actividadInicial.materiales || []).map((m) => {
+          const mat = materiales.find((x) => x.id === m.id);
+          return { id: m.id, name: mat?.name || `ID#${m.id}`, cantidad: m.cantidad, stock: mat?.stock ?? 0 };
+        })
+      );
+      setSelectedReactivos(
+        (actividadInicial.reactivos || []).map((r) => {
+          const rea = reactivos.find((x) => x.id === r.id);
+          return { id: r.id, name: rea?.name || `ID#${r.id}`, cantidad: r.cantidad, stock: rea?.stock ?? 0, unidadMedida: rea?.unidadMedida };
+        })
+      );
+      setSelectedEquipos(actividadInicial.equipos || []);
+    }
+  }, [actividadInicial, materiales, reactivos]);
+
   const resetForm = () => {
-    reset({ fecha: '', horaInicio: '', horaFin: '', laboratorioId: '', cantidadAlumnos: 1, descripcion: '' });
+    reset({ nombre: '', fecha: '', horaInicio: '', horaFin: '', laboratorioId: '', cantidadAlumnos: 1, descripcion: '' });
     setSelectedMaterials([]);
     setSelectedReactivos([]);
     setSelectedEquipos([]);
@@ -60,23 +95,34 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
 
   const onSubmit = async (data: Record<string, any>) => {
     setError('');
-    if (!data.fecha || !data.horaInicio || !data.horaFin || !data.laboratorioId) {
+    if (mode === 'actividad') {
+      if (!data.nombre?.trim() || !data.laboratorioId) {
+        setError('Completá todos los campos obligatorios');
+        return;
+      }
+    } else if (!data.fecha || !data.horaInicio || !data.horaFin || !data.laboratorioId) {
       setError('Completá todos los campos obligatorios');
       return;
     }
     setSubmitting(true);
     try {
-      await onSubmitPedido({
+      const payload = {
         ...data,
         laboratorioId: Number(data.laboratorioId),
         cantidadAlumnos: Number(data.cantidadAlumnos),
         materiales: selectedMaterials.map((m) => ({ id: m.id, cantidad: m.cantidad })),
         reactivos: selectedReactivos.map((r) => ({ id: r.id, cantidad: r.cantidad })),
         equipos: selectedEquipos,
-      });
+      };
+      if (mode === 'actividad' && onSubmitActividad) {
+        if (!data.nombre?.trim()) { setError('El nombre de la actividad es obligatorio'); setSubmitting(false); return; }
+        await onSubmitActividad(payload);
+      } else {
+        await onSubmitPedido(payload);
+      }
       resetForm();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear pedido');
+      setError(err instanceof Error ? err.message : `Error al crear ${mode === 'actividad' ? 'actividad' : 'pedido'}`);
     } finally {
       setSubmitting(false);
     }
@@ -89,9 +135,18 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
       {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
 
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-        <TextField label="Fecha" type="date" {...register('fecha', { required: true })} slotProps={{ inputLabel: { shrink: true } }} error={!!errors.fecha} required sx={{ minWidth: 180 }} />
-        <TextField label="Hora Inicio" placeholder="08:00" {...register('horaInicio', { required: true })} error={!!errors.horaInicio} required sx={{ minWidth: 140 }} />
-        <TextField label="Hora Fin" placeholder="10:00" {...register('horaFin', { required: true })} error={!!errors.horaFin} required sx={{ minWidth: 140 }} />
+        {mode === 'actividad' && (
+          <TextField label="Nombre de la actividad *" {...register('nombre', { required: mode === 'actividad' })} error={!!errors.nombre} helperText={errors.nombre?.message} required sx={{ minWidth: 250 }} />
+        )}
+        {mode !== 'actividad' && (
+          <TextField label="Fecha" type="date" {...register('fecha', { required: mode !== 'actividad' })} slotProps={{ inputLabel: { shrink: true } }} error={!!errors.fecha} required sx={{ minWidth: 180 }} />
+        )}
+        {mode !== 'actividad' && (
+          <TextField label="Hora Inicio" placeholder="08:00" {...register('horaInicio', { required: mode !== 'actividad' })} error={!!errors.horaInicio} required sx={{ minWidth: 140 }} />
+        )}
+        {mode !== 'actividad' && (
+          <TextField label="Hora Fin" placeholder="10:00" {...register('horaFin', { required: mode !== 'actividad' })} error={!!errors.horaFin} required sx={{ minWidth: 140 }} />
+        )}
         <TextField label="Cant. Alumnos" type="number" {...register('cantidadAlumnos', { valueAsNumber: true, min: { value: 1, message: 'Mínimo 1' } })} error={!!errors.cantidadAlumnos} helperText={errors.cantidadAlumnos?.message} required sx={{ minWidth: 140 }} />
       </Box>
 
@@ -224,7 +279,7 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
 
       <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
         <Button type="submit" variant="contained" color="primary" size="large" disabled={submitting}>
-          {submitting ? 'Creando...' : 'Crear Pedido'}
+          {submitting ? 'Creando...' : mode === 'actividad' ? 'Crear Actividad' : 'Crear Pedido'}
         </Button>
         <Button type="button" variant="outlined" color="error" size="large" onClick={resetForm}>
           Cancelar

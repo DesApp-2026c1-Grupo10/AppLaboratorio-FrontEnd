@@ -19,6 +19,11 @@ export interface ReactivoStats {
   cantidad: number;
 }
 
+export interface SustanciaStats {
+  nombre: string;
+  cantidad: number;
+}
+
 export interface EstadisticasData {
   resumen: {
     totalPedidos: number;
@@ -28,6 +33,7 @@ export interface EstadisticasData {
   equiposMasUsados: EquipoStats[];
   materialesMasUsados: MaterialStats[];
   reactivosMasUsados: ReactivoStats[];
+  sustanciasMasUsadas: SustanciaStats[];
   semanal: {
     pedidos: number;
     usosEquipo: number;

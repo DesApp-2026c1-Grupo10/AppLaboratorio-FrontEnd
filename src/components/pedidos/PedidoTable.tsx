@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Button, Table, TableBody, TableCell, TableHead, TableRow,
+  Button, Table, TableBody, TableCell, TableHead, TableRow, Box, Card, CardContent, CardActions,
   Dialog, DialogTitle, DialogContent, DialogActions, Typography, TableContainer, Paper,
 } from '@mui/material';
 import EstadoChip from './EstadoChip';
@@ -61,69 +61,107 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
     FINALIZACION: 'warning',
   };
 
+  const renderAcciones = (pedido: Pedido) => (
+    <>
+      {pedido.estado === 'Pendiente' && (
+        <>
+          <Button onClick={() => aceptarPedido(pedido.id)} color="primary" size="small">Aceptar</Button>
+          <Button onClick={() => rechazarPedido(pedido.id)} color="error" size="small">Rechazar</Button>
+        </>
+      )}
+      {pedido.estado === 'Aprobado' && finalizarPedido && (
+        <Button onClick={() => finalizarPedido(pedido)} color="warning" variant="contained" size="small">
+          Finalizar
+        </Button>
+      )}
+      {pedido.estado === 'Rechazado' && (
+        <span style={{ color: '#888', fontStyle: 'italic' }}>Rechazado</span>
+      )}
+      {pedido.estado === 'Finalizado' && (
+        <span style={{ color: '#888', fontStyle: 'italic' }}>Finalizado</span>
+      )}
+      {pedido.estado === 'Cancelado' && (
+        <span style={{ color: '#888', fontStyle: 'italic' }}>Cancelado</span>
+      )}
+    </>
+  );
+
   return (
     <>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Fecha</TableCell>
-              <TableCell>Horario</TableCell>
-              <TableCell>Laboratorio</TableCell>
-              <TableCell>Alumnos</TableCell>
-              <TableCell>Estado</TableCell>
-              <TableCell>Detalle</TableCell>
-              <TableCell>Historial</TableCell>
-              {esAdmin && <TableCell>Acciones</TableCell>}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {pedidos.map((pedido) => (
-              <TableRow key={pedido.id}>
-                <TableCell>{pedido.fecha ? pedido.fecha.split('-').reverse().join('/') : '-'}</TableCell>
-                <TableCell>{formatTime(pedido.horaInicio)} - {formatTime(pedido.horaFin)}</TableCell>
-                <TableCell>{pedido.Laboratorio?.nombre}</TableCell>
-                <TableCell>{pedido.cantidadAlumnos}</TableCell>
-                <TableCell><EstadoChip estado={pedido.estado} /></TableCell>
-                <TableCell>
-                  <Button size="small" onClick={() => { setDetallePedido(pedido); setDetalleOpen(true); }}>
-                    Ver detalle
-                  </Button>
-                </TableCell>
-                <TableCell>
-                  <Button size="small" onClick={() => verHistorial(pedido.id)}>
-                    Ver historial
-                  </Button>
-                </TableCell>
-                {esAdmin && (
-                  <TableCell>
-                    {pedido.estado === 'Pendiente' && (
-                      <>
-                        <Button onClick={() => aceptarPedido(pedido.id)} color="primary" size="small">Aceptar</Button>
-                        <Button onClick={() => rechazarPedido(pedido.id)} color="error" size="small">Rechazar</Button>
-                      </>
-                    )}
-                    {pedido.estado === 'Aprobado' && finalizarPedido && (
-                      <Button onClick={() => finalizarPedido(pedido)} color="warning" variant="contained" size="small">
-                        Finalizar
-                      </Button>
-                    )}
-                    {pedido.estado === 'Rechazado' && (
-                      <span style={{ color: '#888', fontStyle: 'italic' }}>Rechazado</span>
-                    )}
-                    {pedido.estado === 'Finalizado' && (
-                      <span style={{ color: '#888', fontStyle: 'italic' }}>Finalizado</span>
-                    )}
-                    {pedido.estado === 'Cancelado' && (
-                      <span style={{ color: '#888', fontStyle: 'italic' }}>Cancelado</span>
-                    )}
-                  </TableCell>
-                )}
+      {/* Desktop table */}
+      <Box className="pedidos-table-desktop">
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Fecha</TableCell>
+                <TableCell>Horario</TableCell>
+                <TableCell>Laboratorio</TableCell>
+                <TableCell>Alumnos</TableCell>
+                <TableCell>Estado</TableCell>
+                <TableCell>Detalle</TableCell>
+                <TableCell>Historial</TableCell>
+                {esAdmin && <TableCell>Acciones</TableCell>}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {pedidos.map((pedido) => (
+                <TableRow key={pedido.id}>
+                  <TableCell>{pedido.fecha ? pedido.fecha.split('-').reverse().join('/') : '-'}</TableCell>
+                  <TableCell>{formatTime(pedido.horaInicio)} - {formatTime(pedido.horaFin)}</TableCell>
+                  <TableCell>{pedido.Laboratorio?.nombre}</TableCell>
+                  <TableCell>{pedido.cantidadAlumnos}</TableCell>
+                  <TableCell><EstadoChip estado={pedido.estado} /></TableCell>
+                  <TableCell>
+                    <Button size="small" onClick={(e) => { e.currentTarget.blur(); setDetallePedido(pedido); setDetalleOpen(true); }}>
+                      Ver detalle
+                    </Button>
+                  </TableCell>
+                  <TableCell>
+                    <Button size="small" onClick={() => verHistorial(pedido.id)}>
+                      Ver historial
+                    </Button>
+                  </TableCell>
+                  {esAdmin && (
+                    <TableCell>{renderAcciones(pedido)}</TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+
+      {/* Mobile cards */}
+      <Box className="pedidos-cards-mobile">
+        {pedidos.map((pedido) => (
+          <Card key={pedido.id} variant="outlined">
+            <CardContent sx={{ pb: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  {pedido.Laboratorio?.nombre || 'Sin lab'}
+                </Typography>
+                <EstadoChip estado={pedido.estado} />
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                {pedido.fecha ? pedido.fecha.split('-').reverse().join('/') : '-'} | {formatTime(pedido.horaInicio)} - {formatTime(pedido.horaFin)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {pedido.cantidadAlumnos} alumnos | Solicitante: {pedido.Usuario ? `${pedido.Usuario.nombre} ${pedido.Usuario.apellido}` : '-'}
+              </Typography>
+            </CardContent>
+            <CardActions sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+              <Button size="small" onClick={(e) => { e.currentTarget.blur(); setDetallePedido(pedido); setDetalleOpen(true); }}>
+                Ver detalle
+              </Button>
+              <Button size="small" onClick={() => verHistorial(pedido.id)}>
+                Historial
+              </Button>
+              {esAdmin && renderAcciones(pedido)}
+            </CardActions>
+          </Card>
+        ))}
+      </Box>
 
       <DetallePedidoDialog
         open={detalleOpen}

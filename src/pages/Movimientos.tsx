@@ -26,6 +26,8 @@ export default function Movimientos() {
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [reactivos, setReactivos] = useState<Reactivo[]>([]);
   const [tipoFilter, setTipoFilter] = useState('');
+  const [tipoItem, setTipoItem] = useState<'material' | 'reactivo' | ''>('');
+  const [itemId, setItemId] = useState<number | ''>('');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
@@ -42,11 +44,10 @@ export default function Movimientos() {
     const load = async () => {
       setLoading(true);
       try {
+        const matId = materialFilterUrl ? Number(materialFilterUrl) : tipoItem === 'material' && itemId ? Number(itemId) : undefined;
+        const reacId = reactivoFilterUrl ? Number(reactivoFilterUrl) : tipoItem === 'reactivo' && itemId ? Number(itemId) : undefined;
         const result = await getMovimientos(
-          tipoFilter || undefined,
-          materialFilterUrl ? Number(materialFilterUrl) : undefined,
-          reactivoFilterUrl ? Number(reactivoFilterUrl) : undefined,
-          page + 1, rowsPerPage,
+          tipoFilter || undefined, matId, reacId, page + 1, rowsPerPage,
         );
         setMovimientos(Array.isArray(result) ? result : (result?.data ?? []));
         setTotal(Array.isArray(result) ? result.length : (result?.total ?? 0));
@@ -57,7 +58,7 @@ export default function Movimientos() {
       }
     };
     load();
-  }, [tipoFilter, page, rowsPerPage, materialFilterUrl, reactivoFilterUrl]);
+  }, [tipoFilter, tipoItem, itemId, page, rowsPerPage, materialFilterUrl, reactivoFilterUrl]);
 
   const openCreate = () => {
     setDialogOpen(true);
@@ -93,15 +94,34 @@ export default function Movimientos() {
         </Box>
 
         <Box className="inv-toolbar">
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel>Tipo</InputLabel>
-            <Select value={tipoFilter} label="Tipo" onChange={(e) => setTipoFilter(e.target.value)}>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Tipo mov.</InputLabel>
+            <Select value={tipoFilter} label="Tipo mov." onChange={(e) => setTipoFilter(e.target.value)}>
               <MenuItem value="">Todos</MenuItem>
               <MenuItem value="entrada">Entradas</MenuItem>
               <MenuItem value="salida">Salidas</MenuItem>
             </Select>
           </FormControl>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nuevo Movimiento</Button>
+          <FormControl size="small" sx={{ minWidth: 130 }}>
+            <InputLabel>Tipo item</InputLabel>
+            <Select value={tipoItem} label="Tipo item" onChange={(e) => { setTipoItem(e.target.value as typeof tipoItem); setItemId(''); }}>
+              <MenuItem value="">Todos</MenuItem>
+              <MenuItem value="material">Material</MenuItem>
+              <MenuItem value="reactivo">Reactivo</MenuItem>
+            </Select>
+          </FormControl>
+          {tipoItem && (
+            <FormControl size="small" sx={{ minWidth: 180 }}>
+              <InputLabel>{tipoItem === 'material' ? 'Material' : 'Reactivo'}</InputLabel>
+              <Select value={itemId} label={tipoItem === 'material' ? 'Material' : 'Reactivo'} onChange={(e) => setItemId(e.target.value as number)}>
+                <MenuItem value="">Seleccionar...</MenuItem>
+                {(tipoItem === 'material' ? materiales : reactivos).map((item) => (
+                  <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate} sx={{ ml: 'auto' }}>Nuevo Movimiento</Button>
         </Box>
 
         {(materialFilterUrl || reactivoFilterUrl) && (

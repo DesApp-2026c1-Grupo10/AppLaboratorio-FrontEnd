@@ -137,14 +137,14 @@ export default function Estadisticas() {
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography variant="h6" sx={{ mb: 2 }}>Materiales más consumidos</Typography>
+                <Typography variant="h6" sx={{ mb: 2 }}>Materiales más utilizados</Typography>
                 <TableContainer component={Paper} variant="outlined">
                   <Table size="small">
                     <TableHead>
                       <TableRow>
                         <TableCell>#</TableCell>
                         <TableCell>Material</TableCell>
-                        <TableCell align="right">Cantidad consumida</TableCell>
+                        <TableCell align="right">Cantidad utilizada</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -156,6 +156,38 @@ export default function Estadisticas() {
                         </TableRow>
                       ))}
                       {(!data?.materialesMasUsados || data.materialesMasUsados.length === 0) && (
+                        <TableRow><TableCell colSpan={3} align="center">Sin datos</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Sustancias básicas más consumidas */}
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" sx={{ mb: 2 }}>Sustancias Básicas más consumidas</Typography>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>#</TableCell>
+                        <TableCell>Sustancia</TableCell>
+                        <TableCell align="right">Cantidad consumida</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {(data?.sustanciasMasUsadas ?? []).map((s, i) => (
+                        <TableRow key={s.nombre}>
+                          <TableCell>{i + 1}</TableCell>
+                          <TableCell>{s.nombre}</TableCell>
+                          <TableCell align="right">{s.cantidad}</TableCell>
+                        </TableRow>
+                      ))}
+                      {(!data?.sustanciasMasUsadas || data.sustanciasMasUsadas.length === 0) && (
                         <TableRow><TableCell colSpan={3} align="center">Sin datos</TableCell></TableRow>
                       )}
                     </TableBody>

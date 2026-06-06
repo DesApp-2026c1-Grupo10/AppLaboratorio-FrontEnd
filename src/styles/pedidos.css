@@ -74,3 +74,23 @@
   box-shadow:
     0 2px 10px rgba(0,0,0,0.05);
 }
+
+.pedidos-table-desktop {
+  display: block;
+}
+
+.pedidos-cards-mobile {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .pedidos-table-desktop {
+    display: none;
+  }
+
+  .pedidos-cards-mobile {
+    display: flex;
+  }
+}
