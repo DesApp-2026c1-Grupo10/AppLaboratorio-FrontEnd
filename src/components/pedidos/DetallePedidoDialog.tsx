@@ -1,9 +1,13 @@
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
   Typography, Box, Chip, Table, TableBody, TableCell, TableRow,
+  Checkbox, FormControlLabel, FormGroup, CircularProgress,
 } from '@mui/material';
+import { useEffect, useState } from 'react';
 import EstadoChip from './EstadoChip';
 import type { Pedido } from '../../types/pedido';
+import type { Tarea } from '../../types/tarea';
+import { getTareas, toggleTarea } from '../../api/pedidos';
 import { formatTime } from '../../utils/format';
 
 interface Props {
@@ -13,6 +17,24 @@ interface Props {
 }
 
 export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
+  const [tareas, setTareas] = useState<Tarea[]>([]);
+  const [loadingTareas, setLoadingTareas] = useState(false);
+
+  useEffect(() => {
+    if (open && pedido) {
+      setLoadingTareas(true);
+      getTareas(pedido.id).then(setTareas).finally(() => setLoadingTareas(false));
+    } else {
+      setTareas([]);
+    }
+  }, [open, pedido]);
+
+  const handleToggle = async (tarea: Tarea) => {
+    if (!pedido) return;
+    const updated = await toggleTarea(pedido.id, tarea.id);
+    setTareas((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  };
+
   if (!pedido) return null;
 
   return (
@@ -104,6 +126,41 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
                   <Chip key={eq.id} label={`${eq.name} (${eq.status})`} size="small" />
                 ))}
               </Box>
+            </Box>
+          )}
+
+          {loadingTareas ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : tareas.length > 0 && (
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">Checklist</Typography>
+              <FormGroup>
+                {tareas.map((t) => (
+                  <FormControlLabel
+                    key={t.id}
+                    control={
+                      <Checkbox
+                        checked={t.completada}
+                        onChange={() => handleToggle(t)}
+                        size="small"
+                      />
+                    }
+                    label={
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          textDecoration: t.completada ? 'line-through' : 'none',
+                          color: t.completada ? 'text.disabled' : 'text.primary',
+                        }}
+                      >
+                        {t.descripcion}
+                      </Typography>
+                    }
+                  />
+                ))}
+              </FormGroup>
             </Box>
           )}
         </Box>

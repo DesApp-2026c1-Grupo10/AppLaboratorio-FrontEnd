@@ -1,5 +1,6 @@
 import { API_URL } from './config';
 import type { Pedido } from '../types/pedido';
+import type { Tarea } from '../types/tarea';
 
 export async function getPedidos(): Promise<Pedido[]> {
   const response = await fetch(`${API_URL}/pedidos?_t=${Date.now()}`);
@@ -72,6 +73,23 @@ export async function finalizarPedido(id: number, data: {
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || 'Error finalizando pedido');
+  return result.data;
+}
+
+export async function getTareas(id: number): Promise<Tarea[]> {
+  const response = await fetch(`${API_URL}/pedidos/${id}/tareas?_t=${Date.now()}`);
+  if (!response.ok) throw new Error('Error obteniendo tareas');
+  const result = await response.json();
+  return result.data || [];
+}
+
+export async function toggleTarea(pedidoId: number, tareaId: number): Promise<Tarea> {
+  const response = await fetch(`${API_URL}/pedidos/${pedidoId}/tareas/${tareaId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) throw new Error('Error actualizando tarea');
+  const result = await response.json();
   return result.data;
 }
 
