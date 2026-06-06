@@ -115,12 +115,16 @@ export default function Inventario() {
               {stockBajo.length === 0 ? (
                 <Typography color="text.secondary">No hay materiales o reactivos con stock bajo</Typography>
               ) : (
-                stockBajo.map((item) => (
-                  <Box key={`${'stockMinimo' in item ? 'mat' : 'rea'}-${item.id}`} className="alerta-item">
-                    <Typography><strong>{item.name}</strong></Typography>
-                    <Chip label={`Stock: ${item.stock} / Mín: ${item.stockMinimo}`} color="warning" size="small" />
-                  </Box>
-                ))
+                stockBajo.map((item) => {
+                  const isRea = 'vencimiento' in item;
+                  const key = 'unidadMedida' in item ? (isRea ? 'rea' : 'sus') : 'mat';
+                  return (
+                    <Box key={`${key}-${item.id}`} className="alerta-item">
+                      <Typography><strong>{item.name}</strong></Typography>
+                      <Chip label={`Stock: ${item.stock} / Mín: ${item.stockMinimo}`} color="warning" size="small" />
+                    </Box>
+                  );
+                })
               )}
             </CardContent>
           </Card>

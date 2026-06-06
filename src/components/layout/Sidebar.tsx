@@ -30,6 +30,7 @@ const menuItems = [
   { text: "Pedidos", path: "/pedidos", icon: <EventNoteIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
   { text: "Agenda", path: "/agenda", icon: <EventNoteIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
   { text: "Inventario", path: "/inventario", icon: <InventoryIcon />, roles: ['Desarrollador'] },
+  { text: "Sustancias Básicas", path: "/sustancias-basicas", icon: <BiotechIcon />, roles: ['Desarrollador'] },
   { text: "Estadísticas", path: "/estadisticas", icon: <BarChartIcon />, roles: ['Desarrollador'] },
 ];
 

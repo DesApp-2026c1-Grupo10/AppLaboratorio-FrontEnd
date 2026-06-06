@@ -5,8 +5,14 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 import { getActividadesPredefinidas, createActividadPredefinida, updateActividadPredefinida, deleteActividadPredefinida } from '../../api/actividadesPredefinidas';
+import { getMateriales } from '../../api/materiales';
+import { getReactivos } from '../../api/reactivos';
+import { getEquipos } from '../../api/equipos';
 import type { ActividadPredefinida } from '../../types/actividadPredefinida';
 import type { Laboratorio } from '../../types/laboratorio';
+import type { Material } from '../../types/material';
+import type { Reactivo } from '../../types/reactivo';
+import type { Equipo } from '../../types/equipo';
 import PedidoForm from './PedidoForm';
 
 interface Props {
@@ -26,6 +32,9 @@ export default function ActividadesPredefinidasPanel({ open, laboratorios, onSel
   const [horaInicio, setHoraInicio] = useState('08:00');
   const [horaFin, setHoraFin] = useState('10:00');
   const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
+  const [materiales, setMateriales] = useState<Material[]>([]);
+  const [reactivos, setReactivos] = useState<Reactivo[]>([]);
+  const [equipos, setEquipos] = useState<Equipo[]>([]);
 
   const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
   const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
@@ -92,6 +101,16 @@ export default function ActividadesPredefinidasPanel({ open, laboratorios, onSel
     setEditingActividad(act);
     setShowCreateForm(true);
   };
+
+  useEffect(() => {
+    if (detalleActividad) {
+      Promise.all([
+        getMateriales().then(setMateriales).catch(() => {}),
+        getReactivos().then(setReactivos).catch(() => {}),
+        getEquipos().then(setEquipos).catch(() => {}),
+      ]);
+    }
+  }, [detalleActividad]);
 
   const handleSeleccionar = (act: ActividadPredefinida) => {
     setSelectAct(act);
@@ -192,25 +211,34 @@ export default function ActividadesPredefinidasPanel({ open, laboratorios, onSel
               {detalleActividad.config?.materiales && detalleActividad.config.materiales.length > 0 && (
                 <Box>
                   <Typography variant="subtitle2" color="text.secondary">Materiales</Typography>
-                  {detalleActividad.config.materiales.map((m: any) => (
-                    <Typography key={m.id} variant="body2">• ID #{m.id} - Cant: {m.cantidad}</Typography>
-                  ))}
+                  {detalleActividad.config.materiales.map((m: any) => {
+                    const mat = materiales.find((x) => x.id === m.id);
+                    return (
+                      <Typography key={m.id} variant="body2">• {mat?.name || `ID #${m.id}`} - Cant: {m.cantidad}</Typography>
+                    );
+                  })}
                 </Box>
               )}
               {detalleActividad.config?.reactivos && detalleActividad.config.reactivos.length > 0 && (
                 <Box>
                   <Typography variant="subtitle2" color="text.secondary">Reactivos</Typography>
-                  {detalleActividad.config.reactivos.map((r: any) => (
-                    <Typography key={r.id} variant="body2">• ID #{r.id} - Cant: {r.cantidad}</Typography>
-                  ))}
+                  {detalleActividad.config.reactivos.map((r: any) => {
+                    const rea = reactivos.find((x) => x.id === r.id);
+                    return (
+                      <Typography key={r.id} variant="body2">• {rea?.name || `ID #${r.id}`} - Cant: {r.cantidad}</Typography>
+                    );
+                  })}
                 </Box>
               )}
               {detalleActividad.config?.equipos && detalleActividad.config.equipos.length > 0 && (
                 <Box>
                   <Typography variant="subtitle2" color="text.secondary">Equipos</Typography>
-                  {detalleActividad.config.equipos.map((id: number) => (
-                    <Typography key={id} variant="body2">• Equipo ID #{id}</Typography>
-                  ))}
+                  {detalleActividad.config.equipos.map((id: number) => {
+                    const eq = equipos.find((x) => x.id === id);
+                    return (
+                      <Typography key={id} variant="body2">• {eq?.name || `Equipo ID #${id}`}</Typography>
+                    );
+                  })}
                 </Box>
               )}
             </Box>
