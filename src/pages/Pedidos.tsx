@@ -7,7 +7,9 @@ import PedidoForm from '../components/pedidos/PedidoForm';
 import PedidoTable from '../components/pedidos/PedidoTable';
 import FinalizarDialog from '../components/pedidos/FinalizarDialog';
 import ActividadesPredefinidasPanel from '../components/pedidos/ActividadesPredefinidasPanel';
-import { getPedidos, createPedido, aprobarPedido, rechazarPedido, finalizarPedido } from '../api/pedidos';
+import RevisarPedidoDialog from '../components/pedidos/RevisarPedidoDialog';
+import RevisionPendienteDialog from '../components/pedidos/RevisionPendienteDialog';
+import { getPedidos, createPedido, aprobarPedido, rechazarPedido, finalizarPedido, crearRevision } from '../api/pedidos';
 import { getLaboratorios } from '../api/laboratorios';
 import type { Pedido } from '../types/pedido';
 import type { Laboratorio } from '../types/laboratorio';
@@ -22,6 +24,9 @@ export default function Pedidos() {
   const [pedidoToFinalize, setPedidoToFinalize] = useState<Pedido | null>(null);
   const [soloMios, setSoloMios] = useState(false);
   const [showActividades, setShowActividades] = useState(false);
+  const [pedidoToReview, setPedidoToReview] = useState<Pedido | null>(null);
+  const [pedidoRevision, setPedidoRevision] = useState<Pedido | null>(null);
+  const [pedidosConRevision, setPedidosConRevision] = useState<Set<number>>(new Set());
 
   const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
   const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
@@ -117,6 +122,39 @@ export default function Pedidos() {
     setPedidoToFinalize(pedido);
   };
 
+  const handleRevisar = (pedido: Pedido) => {
+    setPedidoToReview(pedido);
+  };
+
+  const handleEnviarRevision = async (comentario: string, cambios: Record<string, any>) => {
+    if (!usuarioLogueado || !pedidoToReview) return;
+    if (Object.keys(cambios).length === 0) {
+      setSnackbar({ msg: 'No hay cambios propuestos. Modificá al menos un campo.', severity: 'error' });
+      return;
+    }
+    try {
+      await crearRevision(pedidoToReview.id, { usuarioId: usuarioLogueado.id, comentario, cambios });
+      setSnackbar({ msg: 'Revisión enviada al creador del pedido.', severity: 'success' });
+      setPedidoToReview(null);
+    } catch (error) {
+      setSnackbar({ msg: 'Error al enviar revisión: ' + (error instanceof Error ? error.message : ''), severity: 'error' });
+    }
+  };
+
+  const handleVerRevision = (pedido: Pedido) => {
+    setPedidoRevision(pedido);
+  };
+
+  const handleRevisionComplete = (updatedPedido?: Pedido) => {
+    const pid = pedidoRevision?.id;
+    if (pid) setPedidosConRevision((prev) => new Set(prev).add(pid));
+    if (updatedPedido) {
+      setPedidos((prev) => prev.map((p) => p.id === updatedPedido.id ? updatedPedido : p));
+    }
+    setPedidoRevision(null);
+    setSnackbar({ msg: 'Revisión procesada.', severity: 'success' });
+  };
+
   const handleFinalizarConfirm = async (data: {
     materiales: { id: number; cantidad: number }[];
     reactivos: { id: number; cantidad: number }[];
@@ -188,6 +226,9 @@ export default function Pedidos() {
                 rechazarPedido={rechazar}
                 finalizarPedido={handleFinalizarClick}
                 esAdmin={esAdmin}
+                onRevisar={esAdmin ? handleRevisar : undefined}
+                onVerRevision={!esAdmin ? handleVerRevision : undefined}
+                pedidosConRevision={pedidosConRevision}
               />
             </>
           )}
@@ -199,6 +240,21 @@ export default function Pedidos() {
           <Alert severity={snackbar.severity} onClose={() => setSnackbar(null)}>{snackbar.msg}</Alert>
         </Snackbar>
       )}
+
+      <RevisarPedidoDialog
+        open={!!pedidoToReview}
+        pedido={pedidoToReview}
+        onSubmit={handleEnviarRevision}
+        onClose={() => setPedidoToReview(null)}
+      />
+
+      <RevisionPendienteDialog
+        open={!!pedidoRevision}
+        pedido={pedidoRevision}
+        usuarioId={usuarioLogueado?.id}
+        onComplete={handleRevisionComplete}
+        onClose={() => setPedidoRevision(null)}
+      />
 
       <FinalizarDialog
         key={pedidoToFinalize?.id || 'none'}

@@ -24,9 +24,12 @@ interface Props {
   rechazarPedido: (id: number) => void;
   finalizarPedido?: (pedido: Pedido) => void;
   esAdmin?: boolean;
+  onRevisar?: (pedido: Pedido) => void;
+  onVerRevision?: (pedido: Pedido) => void;
+  pedidosConRevision?: Set<number>;
 }
 
-export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, finalizarPedido, esAdmin }: Props) {
+export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, finalizarPedido, esAdmin, onRevisar, onVerRevision, pedidosConRevision }: Props) {
 
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [detallePedido, setDetallePedido] = useState<Pedido | null>(null);
@@ -63,10 +66,23 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
 
   const renderAcciones = (pedido: Pedido) => (
     <>
+      {esAdmin && onRevisar && pedido.estado === 'Pendiente' && (
+        <Button size="small" onClick={(e) => { e.currentTarget.blur(); onRevisar(pedido); }}>Revisar</Button>
+      )}
+      {!esAdmin && onVerRevision && pedido.estado === 'Pendiente' && (
+        <Button
+          size="small"
+          onClick={(e) => { e.currentTarget.blur(); onVerRevision(pedido); }}
+          color={pedidosConRevision?.has(pedido.id) ? 'success' : 'secondary'}
+          disabled={pedidosConRevision?.has(pedido.id)}
+        >
+          {pedidosConRevision?.has(pedido.id) ? 'Revisado' : 'Revisión'}
+        </Button>
+      )}
       {pedido.estado === 'Pendiente' && (
         <>
-          <Button onClick={() => aceptarPedido(pedido.id)} color="primary" size="small">Aceptar</Button>
-          <Button onClick={() => rechazarPedido(pedido.id)} color="error" size="small">Rechazar</Button>
+          {esAdmin && <Button onClick={() => aceptarPedido(pedido.id)} color="primary" size="small">Aceptar</Button>}
+          {esAdmin && <Button onClick={() => rechazarPedido(pedido.id)} color="error" size="small">Rechazar</Button>}
         </>
       )}
       {pedido.estado === 'Aprobado' && finalizarPedido && (
@@ -101,7 +117,7 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
                 <TableCell>Estado</TableCell>
                 <TableCell>Detalle</TableCell>
                 <TableCell>Historial</TableCell>
-                {esAdmin && <TableCell>Acciones</TableCell>}
+                <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -122,9 +138,7 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
                       Ver historial
                     </Button>
                   </TableCell>
-                  {esAdmin && (
-                    <TableCell>{renderAcciones(pedido)}</TableCell>
-                  )}
+                  <TableCell>{renderAcciones(pedido)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -157,6 +171,14 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
               <Button size="small" onClick={() => verHistorial(pedido.id)}>
                 Historial
               </Button>
+              {esAdmin && onRevisar && pedido.estado === 'Pendiente' && (
+                <Button size="small" onClick={(e) => { e.currentTarget.blur(); onRevisar(pedido); }}>Revisar</Button>
+              )}
+              {!esAdmin && onVerRevision && pedido.estado === 'Pendiente' && (
+                <Button size="small" color={pedidosConRevision?.has(pedido.id) ? 'success' : 'secondary'} disabled={pedidosConRevision?.has(pedido.id)} onClick={(e) => { e.currentTarget.blur(); onVerRevision(pedido); }}>
+                  {pedidosConRevision?.has(pedido.id) ? 'Revisado' : 'Revisión'}
+                </Button>
+              )}
               {esAdmin && renderAcciones(pedido)}
             </CardActions>
           </Card>
