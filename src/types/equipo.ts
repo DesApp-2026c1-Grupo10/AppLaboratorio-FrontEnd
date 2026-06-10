@@ -6,7 +6,7 @@ export interface Equipo {
   is_movable: boolean;
   bld_id?: number;
   laboratorioId?: number;
-  laboratorio?: { id: number; nombre: string };
+  laboratorio?: { id: number; nombre: string; edificio: string };
   ultimaRevision?: string;
   observaciones?: string;
   usos?: UsoEquipo[];

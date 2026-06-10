@@ -120,7 +120,7 @@ export default function RevisionPendienteDialog({ open, pedido, usuarioId, onCom
     if (!pedido || !revision) return;
     setSubmitting(true);
     try {
-      await rechazarRevision(pedido.id, revision.id, motivo);
+      await rechazarRevision(pedido.id, revision.id, motivo, usuarioId!);
       onComplete();
     } catch (e) {
       console.error(e);

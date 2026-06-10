@@ -27,9 +27,13 @@ interface Props {
   onRevisar?: (pedido: Pedido) => void;
   onVerRevision?: (pedido: Pedido) => void;
   pedidosConRevision?: Set<number>;
+  revisionesPorPedido?: Record<number, { pendiente: boolean; procesada: boolean }>;
+  usuarioLogueadoId?: number;
+  revisionesRespuestaVistas?: Set<number>;
+  onMarcarRevisionVista?: (pedidoId: number) => void;
 }
 
-export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, finalizarPedido, esAdmin, onRevisar, onVerRevision, pedidosConRevision }: Props) {
+export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, finalizarPedido, esAdmin, onRevisar, onVerRevision, pedidosConRevision, revisionesPorPedido, usuarioLogueadoId, revisionesRespuestaVistas, onMarcarRevisionVista }: Props) {
 
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [detallePedido, setDetallePedido] = useState<Pedido | null>(null);
@@ -37,12 +41,18 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
   const [historial, setHistorial] = useState<HistorialEntry[]>([]);
   const [historialPedidoId, setHistorialPedidoId] = useState<number | null>(null);
 
+  const tieneRespuestaNoVista = (pedidoId: number) => {
+    const info = revisionesPorPedido?.[pedidoId];
+    return info?.procesada && !info.pendiente && !revisionesRespuestaVistas?.has(pedidoId);
+  };
+
   const verHistorial = async (id: number) => {
     try {
       const data = await getHistorialPedido(id);
       setHistorial(data);
       setHistorialPedidoId(id);
       setHistorialOpen(true);
+      onMarcarRevisionVista?.(id);
     } catch (err) {
       console.error(err);
     }
@@ -64,12 +74,17 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
     FINALIZACION: 'warning',
   };
 
+  const esOwner = (pedido: Pedido) => pedido.usuarioId === usuarioLogueadoId;
+
+  const infoRevision = (pedido: Pedido) => pedido.id != null ? revisionesPorPedido?.[pedido.id] : undefined;
+  const tieneRevision = (pedido: Pedido) => !!infoRevision(pedido) || pedidosConRevision?.has(pedido.id);
+
   const renderAcciones = (pedido: Pedido) => (
     <>
       {esAdmin && onRevisar && pedido.estado === 'Pendiente' && (
         <Button size="small" onClick={(e) => { e.currentTarget.blur(); onRevisar(pedido); }}>Revisar</Button>
       )}
-      {!esAdmin && onVerRevision && pedido.estado === 'Pendiente' && (
+      {onVerRevision && esOwner(pedido) && pedido.estado === 'Pendiente' && tieneRevision(pedido) && (
         <Button
           size="small"
           onClick={(e) => { e.currentTarget.blur(); onVerRevision(pedido); }}
@@ -83,6 +98,7 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
         <>
           {esAdmin && <Button onClick={() => aceptarPedido(pedido.id)} color="primary" size="small">Aceptar</Button>}
           {esAdmin && <Button onClick={() => rechazarPedido(pedido.id)} color="error" size="small">Rechazar</Button>}
+          {!esAdmin && <span style={{ color: '#888', fontStyle: 'italic' }}>Pendiente</span>}
         </>
       )}
       {pedido.estado === 'Aprobado' && finalizarPedido && (
@@ -134,7 +150,7 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
                     </Button>
                   </TableCell>
                   <TableCell>
-                    <Button size="small" onClick={() => verHistorial(pedido.id)}>
+                    <Button size="small" onClick={() => verHistorial(pedido.id)} color={tieneRespuestaNoVista(pedido.id) ? 'warning' : 'primary'}>
                       Ver historial
                     </Button>
                   </TableCell>
@@ -168,18 +184,18 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
               <Button size="small" onClick={(e) => { e.currentTarget.blur(); setDetallePedido(pedido); setDetalleOpen(true); }}>
                 Ver detalle
               </Button>
-              <Button size="small" onClick={() => verHistorial(pedido.id)}>
+              <Button size="small" color={tieneRespuestaNoVista(pedido.id) ? 'warning' : 'primary'} onClick={() => verHistorial(pedido.id)}>
                 Historial
               </Button>
               {esAdmin && onRevisar && pedido.estado === 'Pendiente' && (
                 <Button size="small" onClick={(e) => { e.currentTarget.blur(); onRevisar(pedido); }}>Revisar</Button>
               )}
-              {!esAdmin && onVerRevision && pedido.estado === 'Pendiente' && (
+              {onVerRevision && esOwner(pedido) && pedido.estado === 'Pendiente' && tieneRevision(pedido) && (
                 <Button size="small" color={pedidosConRevision?.has(pedido.id) ? 'success' : 'secondary'} disabled={pedidosConRevision?.has(pedido.id)} onClick={(e) => { e.currentTarget.blur(); onVerRevision(pedido); }}>
                   {pedidosConRevision?.has(pedido.id) ? 'Revisado' : 'Revisión'}
                 </Button>
               )}
-              {esAdmin && renderAcciones(pedido)}
+              {renderAcciones(pedido)}
             </CardActions>
           </Card>
         ))}

@@ -114,9 +114,7 @@ export default function RevisarPedidoDialog({ open, pedido, onSubmit, onClose }:
     try {
       await onSubmit(comentario, cambios);
       onClose();
-    } catch (e) {
-      console.error(e);
-    } finally {
+    } catch {
       setSubmitting(false);
     }
   };

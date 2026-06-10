@@ -101,6 +101,13 @@ export async function getHistorialPedido(id: number): Promise<any[]> {
   return result.data || [];
 }
 
+export async function getPedidosConRevisionPendiente(): Promise<Record<number, { pendiente: boolean; procesada: boolean }>> {
+  const response = await fetch(`${API_URL}/pedidos/con-revision-pendiente?_t=${Date.now()}`);
+  if (!response.ok) throw new Error('Error obteniendo pedidos con revisión pendiente');
+  const result = await response.json();
+  return result.data || {};
+}
+
 export async function getRevisiones(id: number): Promise<PedidoRevision[]> {
   const response = await fetch(`${API_URL}/pedidos/${id}/revisiones?_t=${Date.now()}`);
   if (!response.ok) throw new Error('Error obteniendo revisiones');
@@ -134,11 +141,11 @@ export async function aceptarRevision(pedidoId: number, revisionId: number, usua
   return result.data;
 }
 
-export async function rechazarRevision(pedidoId: number, revisionId: number, motivo: string): Promise<PedidoRevision> {
+export async function rechazarRevision(pedidoId: number, revisionId: number, motivo: string, usuarioId: number): Promise<PedidoRevision> {
   const response = await fetch(`${API_URL}/pedidos/${pedidoId}/revisiones/${revisionId}/rechazar`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ motivo }),
+    body: JSON.stringify({ motivo, usuarioId }),
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || 'Error rechazando revisión');

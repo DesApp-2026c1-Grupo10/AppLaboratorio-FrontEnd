@@ -17,7 +17,7 @@ interface EquipoDialogProps {
 
 export default function EquipoDialog({ open, editing, laboratorios, onSave, onClose }: EquipoDialogProps) {
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
-    defaultValues: { name: '', descripcion: '', status: 'Disponible', is_movable: 'false', bld_id: '', laboratorioId: '', ultimaRevision: '', observaciones: '' },
+    defaultValues: { name: '', descripcion: '', status: 'Disponible', is_movable: 'false', laboratorioId: '', ultimaRevision: '', observaciones: '' },
   });
 
   useEffect(() => {
@@ -25,12 +25,12 @@ export default function EquipoDialog({ open, editing, laboratorios, onSave, onCl
       if (editing) {
         reset({
           name: editing.name, descripcion: editing.descripcion || '', status: editing.status,
-          is_movable: String(editing.is_movable), bld_id: String(editing.bld_id || ''),
+          is_movable: String(editing.is_movable),
           laboratorioId: String(editing.laboratorioId || ''), ultimaRevision: editing.ultimaRevision || '',
           observaciones: editing.observaciones || '',
         });
       } else {
-        reset({ name: '', descripcion: '', status: 'Disponible', is_movable: 'false', bld_id: '', laboratorioId: '', ultimaRevision: '', observaciones: '' });
+        reset({ name: '', descripcion: '', status: 'Disponible', is_movable: 'false', laboratorioId: '', ultimaRevision: '', observaciones: '' });
       }
     }
   }, [open, editing, reset]);
@@ -58,16 +58,23 @@ export default function EquipoDialog({ open, editing, laboratorios, onSave, onCl
                 </FormControl>
               )}
             />
-            <TextField label="Edificio (bld_id)" type="number" {...register('bld_id')} fullWidth />
             <Controller
               name="laboratorioId"
               control={control}
-              render={({ field }) => (
-                <TextField label="Laboratorio" select {...field} fullWidth slotProps={{ select: { native: true } }}>
-                  <option value="">Sin laboratorio</option>
-                  {laboratorios.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
-                </TextField>
-              )}
+              render={({ field }) => {
+                const labSel = laboratorios.find((l) => l.id === Number(field.value));
+                return (
+                  <Box>
+                    <TextField label="Laboratorio" select {...field} fullWidth slotProps={{ select: { native: true } }}>
+                      <option value="">Sin laboratorio</option>
+                      {laboratorios.map((l) => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+                    </TextField>
+                    {labSel && (
+                      <TextField label="Edificio" value={labSel.edificio} fullWidth slotProps={{ input: { readOnly: true } }} sx={{ mt: 1 }} />
+                    )}
+                  </Box>
+                );
+              }}
             />
             <Controller
               name="is_movable"

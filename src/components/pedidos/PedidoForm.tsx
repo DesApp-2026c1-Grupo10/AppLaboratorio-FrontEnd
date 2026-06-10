@@ -28,6 +28,7 @@ interface Props {
     reactivos?: { id: number; cantidad: number }[];
     equipos?: number[];
   } | null;
+  onActividadesClick?: () => void;
 }
 
 interface ItemSeleccionado {
@@ -38,7 +39,7 @@ interface ItemSeleccionado {
   unidadMedida?: string;
 }
 
-export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs, mode = 'pedido', onSubmitActividad, actividadInicial }: Props) {
+export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs, mode = 'pedido', onSubmitActividad, actividadInicial, onActividadesClick }: Props) {
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [reactivos, setReactivos] = useState<Reactivo[]>([]);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
@@ -277,13 +278,18 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
         </FormControl>
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap' }}>
         <Button type="submit" variant="contained" color="primary" size="large" disabled={submitting}>
           {submitting ? 'Creando...' : mode === 'actividad' ? 'Crear Actividad' : 'Crear Pedido'}
         </Button>
         <Button type="button" variant="outlined" color="error" size="large" onClick={resetForm}>
           Cancelar
         </Button>
+        {onActividadesClick && (
+          <Button type="button" variant="outlined" size="large" onClick={(e) => { e.currentTarget.blur(); onActividadesClick(); }}>
+            Actividades Predefinidas
+          </Button>
+        )}
       </Box>
     </Box>
   );

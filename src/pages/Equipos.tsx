@@ -78,7 +78,6 @@ export default function Equipos() {
     try {
       const payload = {
         ...data, is_movable: data.is_movable === 'true',
-        bld_id: data.bld_id ? Number(data.bld_id) : null,
         laboratorioId: data.laboratorioId ? Number(data.laboratorioId) : null,
         ultimaRevision: data.ultimaRevision || null, observaciones: data.observaciones || null,
       };
@@ -148,7 +147,7 @@ export default function Equipos() {
                   <TableCell>{eq.name}</TableCell>
                   <TableCell><Chip label={eq.status} color={statusColor[eq.status] || 'default'} size="small" /></TableCell>
                   <TableCell>{eq.laboratorio?.nombre || '-'}</TableCell>
-                  <TableCell>{eq.bld_id || '-'}</TableCell>
+                  <TableCell>{eq.laboratorio?.edificio || '-'}</TableCell>
                   <TableCell>{eq.is_movable ? 'Sí' : 'No'}</TableCell>
                   <TableCell>{eq.ultimaRevision ? new Date(eq.ultimaRevision).toLocaleDateString() : '-'}</TableCell>
                   <TableCell>

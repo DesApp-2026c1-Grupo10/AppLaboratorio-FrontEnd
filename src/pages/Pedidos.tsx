@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Snackbar, Alert, Box, CircularProgress, Switch, FormControlLabel, Button } from '@mui/material';
+import { useState, useEffect, useMemo } from 'react';
+import { Snackbar, Alert, Box, CircularProgress, Switch, FormControlLabel, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import type { SnackbarState } from '../types/snackbar';
 import type { ActividadPredefinida } from '../types/actividadPredefinida';
 
@@ -9,10 +9,12 @@ import FinalizarDialog from '../components/pedidos/FinalizarDialog';
 import ActividadesPredefinidasPanel from '../components/pedidos/ActividadesPredefinidasPanel';
 import RevisarPedidoDialog from '../components/pedidos/RevisarPedidoDialog';
 import RevisionPendienteDialog from '../components/pedidos/RevisionPendienteDialog';
-import { getPedidos, createPedido, aprobarPedido, rechazarPedido, finalizarPedido, crearRevision } from '../api/pedidos';
+import { getPedidos, createPedido, aprobarPedido, rechazarPedido, finalizarPedido, crearRevision, getPedidosConRevisionPendiente } from '../api/pedidos';
 import { getLaboratorios } from '../api/laboratorios';
+import { getUsuarios } from '../api/usuarios';
 import type { Pedido } from '../types/pedido';
 import type { Laboratorio } from '../types/laboratorio';
+import type { Usuario } from '../types/usuario';
 import AppLayout from '../components/layout/AppLayout';
 import "../styles/pedidos.css";
 
@@ -27,6 +29,12 @@ export default function Pedidos() {
   const [pedidoToReview, setPedidoToReview] = useState<Pedido | null>(null);
   const [pedidoRevision, setPedidoRevision] = useState<Pedido | null>(null);
   const [pedidosConRevision, setPedidosConRevision] = useState<Set<number>>(new Set());
+  const [revisionesPorPedido, setRevisionesPorPedido] = useState<Record<number, { pendiente: boolean; procesada: boolean }>>({});
+  const [revisionesRespuestaVistas, setRevisionesRespuestaVistas] = useState<Set<number>>(new Set());
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [filtroLab, setFiltroLab] = useState<number | ''>('');
+  const [filtroUser, setFiltroUser] = useState<number | ''>('');
+  const [orden, setOrden] = useState('fecha_desc');
 
   const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
   const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
@@ -38,9 +46,16 @@ export default function Pedidos() {
 
   async function loadData() {
     try {
-      const [pedidosData, laboratoriosData] = await Promise.all([getPedidos(), getLaboratorios()]);
+      const [pedidosData, laboratoriosData, revMap, usuariosData] = await Promise.all([
+        getPedidos(),
+        getLaboratorios(),
+        getPedidosConRevisionPendiente(),
+        getUsuarios(),
+      ]);
       setPedidos(pedidosData);
       setLaboratorios(laboratoriosData);
+      setRevisionesPorPedido(revMap);
+      setUsuarios(usuariosData);
     } catch (error) {
       console.error(error);
     } finally {
@@ -132,17 +147,16 @@ export default function Pedidos() {
       setSnackbar({ msg: 'No hay cambios propuestos. Modificá al menos un campo.', severity: 'error' });
       return;
     }
-    try {
-      await crearRevision(pedidoToReview.id, { usuarioId: usuarioLogueado.id, comentario, cambios });
-      setSnackbar({ msg: 'Revisión enviada al creador del pedido.', severity: 'success' });
-      setPedidoToReview(null);
-    } catch (error) {
-      setSnackbar({ msg: 'Error al enviar revisión: ' + (error instanceof Error ? error.message : ''), severity: 'error' });
-    }
+    await crearRevision(pedidoToReview.id, { usuarioId: usuarioLogueado.id, comentario, cambios });
+    setSnackbar({ msg: 'Revisión enviada al creador del pedido.', severity: 'success' });
   };
 
   const handleVerRevision = (pedido: Pedido) => {
     setPedidoRevision(pedido);
+  };
+
+  const marcarRevisionVista = (pedidoId: number) => {
+    setRevisionesRespuestaVistas((prev) => new Set(prev).add(pedidoId));
   };
 
   const handleRevisionComplete = (updatedPedido?: Pedido) => {
@@ -169,6 +183,34 @@ export default function Pedidos() {
     setPedidoToFinalize(null);
     setSnackbar({ msg: 'Clase finalizada. Stock y equipos actualizados.', severity: 'success' });
   };
+
+  const pedidosFiltrados = useMemo(() => {
+    let lista = [...pedidos];
+
+    if (soloMios && usuarioLogueado) {
+      lista = lista.filter((p) => p.usuarioId === usuarioLogueado.id);
+    }
+    if (filtroLab !== '') {
+      lista = lista.filter((p) => p.laboratorioId === filtroLab);
+    }
+    if (filtroUser !== '') {
+      lista = lista.filter((p) => p.usuarioId === filtroUser);
+    }
+
+    lista.sort((a, b) => {
+      switch (orden) {
+        case 'fecha_asc': return a.fecha.localeCompare(b.fecha);
+        case 'fecha_desc': return b.fecha.localeCompare(a.fecha);
+        case 'hora_asc': return a.horaInicio.localeCompare(b.horaInicio);
+        case 'hora_desc': return b.horaInicio.localeCompare(a.horaInicio);
+        case 'id_asc': return a.id - b.id;
+        case 'id_desc': return b.id - a.id;
+        default: return 0;
+      }
+    });
+
+    return lista;
+  }, [pedidos, soloMios, usuarioLogueado, filtroLab, filtroUser, orden]);
 
   return (
     <AppLayout>
@@ -202,33 +244,57 @@ export default function Pedidos() {
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
           ) : (
             <>
-              <PedidoForm laboratorios={laboratorios} onSubmitPedido={agregarPedido} onRefreshLabs={refreshLaboratorios} />
-              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                <Button variant="outlined" onClick={(e) => { e.currentTarget.blur(); setShowActividades(true); }}>
-                  Actividades Predefinidas
-                </Button>
-              </Box>
+              <PedidoForm laboratorios={laboratorios} onSubmitPedido={agregarPedido} onRefreshLabs={refreshLaboratorios} onActividadesClick={() => setShowActividades(true)} />
               <ActividadesPredefinidasPanel
                 open={showActividades}
                 laboratorios={laboratorios}
                 onSelectActividad={handleSelectActividad}
                 onClose={() => setShowActividades(false)}
               />
-              <br />
-              <FormControlLabel
-                control={<Switch checked={soloMios} onChange={(e) => setSoloMios(e.target.checked)} />}
-                label="Mis pedidos"
-                sx={{ mb: 1 }}
-              />
+              <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center', mt: 5, mb: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+                <FormControl size="small" sx={{ minWidth: 180 }}>
+                  <InputLabel>Laboratorio</InputLabel>
+                  <Select value={filtroLab} label="Laboratorio" onChange={(e) => setFiltroLab(e.target.value as number | '')}>
+                    <MenuItem value="">Todos</MenuItem>
+                    {laboratorios.map((l) => <MenuItem key={l.id} value={l.id}>{l.nombre}</MenuItem>)}
+                  </Select>
+                </FormControl>
+                <FormControl size="small" sx={{ minWidth: 180 }}>
+                  <InputLabel>Usuario</InputLabel>
+                  <Select value={filtroUser} label="Usuario" onChange={(e) => setFiltroUser(e.target.value as number | '')}>
+                    <MenuItem value="">Todos</MenuItem>
+                    {usuarios.map((u) => <MenuItem key={u.id} value={u.id}>{u.nombre} {u.apellido}</MenuItem>)}
+                  </Select>
+                </FormControl>
+                <FormControl size="small" sx={{ minWidth: 180 }}>
+                  <InputLabel>Ordenar por</InputLabel>
+                  <Select value={orden} label="Ordenar por" onChange={(e) => setOrden(e.target.value)}>
+                    <MenuItem value="fecha_desc">Fecha (más reciente)</MenuItem>
+                    <MenuItem value="fecha_asc">Fecha (más antiguo)</MenuItem>
+                    <MenuItem value="hora_desc">Hora (más tarde)</MenuItem>
+                    <MenuItem value="hora_asc">Hora (más temprano)</MenuItem>
+                    <MenuItem value="id_desc">ID (más reciente)</MenuItem>
+                    <MenuItem value="id_asc">ID (más antiguo)</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControlLabel
+                  control={<Switch checked={soloMios} onChange={(e) => setSoloMios(e.target.checked)} />}
+                  label="Mis pedidos"
+                />
+              </Box>
               <PedidoTable
-                pedidos={soloMios ? pedidos.filter((p) => p.usuarioId === usuarioLogueado?.id) : pedidos}
+                pedidos={pedidosFiltrados}
                 aceptarPedido={aceptarPedido}
                 rechazarPedido={rechazar}
                 finalizarPedido={handleFinalizarClick}
                 esAdmin={esAdmin}
                 onRevisar={esAdmin ? handleRevisar : undefined}
-                onVerRevision={!esAdmin ? handleVerRevision : undefined}
+                onVerRevision={handleVerRevision}
                 pedidosConRevision={pedidosConRevision}
+                revisionesPorPedido={revisionesPorPedido}
+                usuarioLogueadoId={usuarioLogueado?.id}
+                revisionesRespuestaVistas={revisionesRespuestaVistas}
+                onMarcarRevisionVista={marcarRevisionVista}
               />
             </>
           )}
