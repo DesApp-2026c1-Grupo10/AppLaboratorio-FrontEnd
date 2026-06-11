@@ -92,7 +92,7 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
     setError('');
   };
 
-  const equiposDisponibles = equipos.filter((eq) => eq.status === 'Disponible');
+  const equiposDisponibles = equipos.filter((eq) => !['Mantenimiento', 'Fuera de servicio'].includes(eq.status));
 
   const onSubmit = async (data: Record<string, any>) => {
     setError('');
@@ -272,7 +272,7 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
           </Select>
           {selectedEquipos.length > 0 && (
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-              Solo se muestran equipos con estado Disponible
+              No se muestran equipos en Mantenimiento o Fuera de servicio
             </Typography>
           )}
         </FormControl>

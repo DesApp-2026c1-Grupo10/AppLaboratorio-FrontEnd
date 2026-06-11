@@ -252,20 +252,24 @@ export default function Pedidos() {
                 onClose={() => setShowActividades(false)}
               />
               <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center', mt: 5, mb: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
-                <FormControl size="small" sx={{ minWidth: 180 }}>
-                  <InputLabel>Laboratorio</InputLabel>
-                  <Select value={filtroLab} label="Laboratorio" onChange={(e) => setFiltroLab(e.target.value as number | '')}>
-                    <MenuItem value="">Todos</MenuItem>
-                    {laboratorios.map((l) => <MenuItem key={l.id} value={l.id}>{l.nombre}</MenuItem>)}
-                  </Select>
-                </FormControl>
-                <FormControl size="small" sx={{ minWidth: 180 }}>
-                  <InputLabel>Usuario</InputLabel>
-                  <Select value={filtroUser} label="Usuario" onChange={(e) => setFiltroUser(e.target.value as number | '')}>
-                    <MenuItem value="">Todos</MenuItem>
-                    {usuarios.map((u) => <MenuItem key={u.id} value={u.id}>{u.nombre} {u.apellido}</MenuItem>)}
-                  </Select>
-                </FormControl>
+                {esAdmin && (
+                  <>
+                    <FormControl size="small" sx={{ minWidth: 180 }}>
+                      <InputLabel>Laboratorio</InputLabel>
+                      <Select value={filtroLab} label="Laboratorio" onChange={(e) => setFiltroLab(e.target.value as number | '')}>
+                        <MenuItem value="">Todos</MenuItem>
+                        {laboratorios.map((l) => <MenuItem key={l.id} value={l.id}>{l.nombre}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 180 }}>
+                      <InputLabel>Usuario</InputLabel>
+                      <Select value={filtroUser} label="Usuario" onChange={(e) => setFiltroUser(e.target.value as number | '')}>
+                        <MenuItem value="">Todos</MenuItem>
+                        {usuarios.map((u) => <MenuItem key={u.id} value={u.id}>{u.nombre} {u.apellido}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                  </>
+                )}
                 <FormControl size="small" sx={{ minWidth: 180 }}>
                   <InputLabel>Ordenar por</InputLabel>
                   <Select value={orden} label="Ordenar por" onChange={(e) => setOrden(e.target.value)}>
