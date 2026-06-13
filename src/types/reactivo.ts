@@ -1,3 +1,10 @@
+export interface ComposicionItem {
+  id: number;
+  name: string;
+  stock: number;
+  ReactivoSustancia: { porcentaje: number };
+}
+
 export interface Reactivo {
   id: number;
   name: string;
@@ -9,6 +16,7 @@ export interface Reactivo {
   prep_time: number;
   laboratorioId?: number;
   laboratorio?: { id: number; nombre: string };
+  composicion?: ComposicionItem[];
   createdAt: string;
   updatedAt: string;
 }

@@ -48,3 +48,14 @@ export async function deleteReactivo(id: number) {
   const res = await fetch(`${API_URL}/inventario/reactivos/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Error eliminando reactivo');
 }
+
+export async function producirReactivo(id: number, cantidad: number, usuarioId?: number) {
+  const res = await fetch(`${API_URL}/inventario/reactivos/${id}/producir`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cantidad, usuarioId }),
+  });
+  const result = await res.json();
+  if (!res.ok) throw result;
+  return result.data;
+}

@@ -25,7 +25,7 @@ import '../styles/inventario.css';
 
 export default function Inventario() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ materiales: 0, reactivos: 0, equipos: 0, sustancias: 0 });
+  const [stats, setStats] = useState({ materiales: 0, reactivos: 0, equipos: 0, sustancias: 0, movimientos: 0 });
   const [stockBajo, setStockBajo] = useState<(Material | Reactivo | SustanciaBasica)[]>([]);
   const [enMantenimiento, setEnMantenimiento] = useState<Equipo[]>([]);
   const [ultimosMovimientos, setUltimosMovimientos] = useState<MovimientoStock[]>([]);
@@ -43,7 +43,7 @@ export default function Inventario() {
         getMovimientos(),
         getSustanciasBasicas(),
       ]);
-      setStats({ materiales: materiales.length, reactivos: reactivos.length, equipos: equipos.length, sustancias: sustancias.length });
+      setStats({ materiales: materiales.length, reactivos: reactivos.length, equipos: equipos.length, sustancias: sustancias.length, movimientos: movimientos.length });
       const matsBajo = materiales.filter((m) => m.stockMinimo > 0 && m.stock <= m.stockMinimo);
       const reactivosBajo = reactivos.filter((r) => r.stockMinimo > 0 && r.stock <= r.stockMinimo);
       const sustanciasBajo = sustancias.filter((s) => s.stockMinimo > 0 && s.stock <= s.stockMinimo);
@@ -98,7 +98,7 @@ export default function Inventario() {
             <Card className="inv-stat-card" onClick={() => navigate('/movimientos')} sx={{ cursor: 'pointer' }}>
               <CardContent>
                 <SwapHorizIcon sx={{ fontSize: 40, color: '#9c27b0' }} />
-                <Typography variant="h3">{ultimosMovimientos.length}</Typography>
+                <Typography variant="h3">{stats.movimientos}</Typography>
                 <Typography color="text.secondary">Movimientos recientes</Typography>
               </CardContent>
             </Card>
@@ -169,6 +169,11 @@ export default function Inventario() {
                       {m.material?.name || m.reactivo?.name} - Cant: {m.cantidad}
                     </Typography>
                   </Box>
+                  {m.observacion && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                      {m.observacion}
+                    </Typography>
+                  )}
                   <Typography variant="caption" color="text.secondary">
                     {m.usuario?.nombre} - {new Date(m.fecha).toLocaleDateString()}
                   </Typography>

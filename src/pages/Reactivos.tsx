@@ -5,9 +5,10 @@ import {
   IconButton, Chip, Snackbar, Alert, TablePagination,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, BuildCircle as BuildCircleIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import ReactivoDialog from '../components/reactivos/ReactivoDialog';
+import ProducirReactivoDialog from '../components/reactivos/ProducirReactivoDialog';
 import { getReactivos, createReactivo, updateReactivo, deleteReactivo } from '../api/reactivos';
 import { getLaboratorios } from '../api/laboratorios';
 import type { SnackbarState } from '../types/snackbar';
@@ -26,10 +27,14 @@ export default function Reactivos() {
   const [deleteDialog, setDeleteDialog] = useState<number | null>(null);
   const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
   const [editing, setEditing] = useState<Reactivo | null>(null);
+  const [producirReactivo, setProducirReactivo] = useState<Reactivo | null>(null);
   const [vencFilter, setVencFilter] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [total, setTotal] = useState(0);
+
+  const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
+  const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
 
   useEffect(() => {
     getLaboratorios().then(setLaboratorios).catch(console.error);
@@ -115,13 +120,14 @@ export default function Reactivos() {
                 <TableCell>Unidad</TableCell>
                 <TableCell>Vencimiento</TableCell>
                 <TableCell>Tiempo Prep. (min)</TableCell>
+                <TableCell>Composición</TableCell>
                 <TableCell>Laboratorio</TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? <TableSkeleton columns={7} rows={5} />
-              : reactivos.length === 0 ? <TableRow><TableCell colSpan={7} align="center">No hay reactivos</TableCell></TableRow>
+              {loading ? <TableSkeleton columns={8} rows={5} />
+              : reactivos.length === 0 ? <TableRow><TableCell colSpan={8} align="center">No hay reactivos</TableCell></TableRow>
               : reactivos.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell>{r.name}</TableCell>
@@ -135,9 +141,23 @@ export default function Reactivos() {
                     ) : '-'}
                   </TableCell>
                   <TableCell>{r.prep_time || 0}</TableCell>
+                  <TableCell>
+                    {r.composicion && r.composicion.length > 0 ? (
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                        {r.composicion.map((c) => (
+                          <Chip key={c.id} label={`${c.name} ${c.ReactivoSustancia.porcentaje}%`} size="small" variant="outlined" />
+                        ))}
+                      </Box>
+                    ) : '-'}
+                  </TableCell>
                   <TableCell>{r.laboratorio?.nombre || '-'}</TableCell>
                   <TableCell>
-                    <IconButton size="small" onClick={() => navigate(`/movimientos?reactivoId=${r.id}`)} title="Ver movimientos"><HistoryIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => navigate(`/movimientos?reactivoId=${r.id}`)} title="Ver movimientos">
+                      <HistoryIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => setProducirReactivo(r)} title="Producir" color="secondary">
+                      <BuildCircleIcon fontSize="small" />
+                    </IconButton>
                     <IconButton size="small" onClick={() => openEdit(r)}><EditIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => setDeleteDialog(r.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                   </TableCell>
@@ -165,6 +185,20 @@ export default function Reactivos() {
         onSave={handleSave}
         onClose={() => setDialogOpen(false)}
       />
+
+      {producirReactivo && (
+        <ProducirReactivoDialog
+          open
+          reactivo={producirReactivo}
+          usuarioId={usuarioLogueado?.id}
+          onComplete={(updated) => {
+            setReactivos((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+            setProducirReactivo(null);
+            setSnackbar({ msg: `${updated.name} producido correctamente`, severity: 'success' });
+          }}
+          onClose={() => setProducirReactivo(null)}
+        />
+      )}
 
       <Dialog open={deleteDialog !== null} onClose={() => setDeleteDialog(null)}>
         <DialogTitle>¿Eliminar reactivo?</DialogTitle>

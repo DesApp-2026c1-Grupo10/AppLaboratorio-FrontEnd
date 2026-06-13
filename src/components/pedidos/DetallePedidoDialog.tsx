@@ -123,7 +123,7 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
               <Typography variant="subtitle2" color="text.secondary">Equipos Solicitados</Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {pedido.Equipments.map((eq) => (
-                  <Chip key={eq.id} label={`${eq.name} (${eq.status})`} size="small" />
+                  <Chip key={eq.id} label={eq.name} size="small" />
                 ))}
               </Box>
             </Box>
