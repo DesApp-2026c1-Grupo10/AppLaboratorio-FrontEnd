@@ -15,7 +15,7 @@ export interface Reactivo {
   vencimiento?: string;
   prep_time: number;
   laboratorioId?: number;
-  laboratorio?: { id: number; nombre: string };
+  laboratorio?: { id: number; nombre: string; edificio?: string };
   composicion?: ComposicionItem[];
   createdAt: string;
   updatedAt: string;

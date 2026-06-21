@@ -47,3 +47,14 @@ export async function deleteMaterial(id: number) {
   const res = await fetch(`${API_URL}/inventario/materiales/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Error eliminando material');
 }
+
+export async function moverMaterial(id: number, nuevoLaboratorioId: number, usuarioId?: number) {
+  const res = await fetch(`${API_URL}/inventario/materiales/${id}/mover`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nuevoLaboratorioId, usuarioId }),
+  });
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.message || 'Error moviendo material');
+  return result.data;
+}

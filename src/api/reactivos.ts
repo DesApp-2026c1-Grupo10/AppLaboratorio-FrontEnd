@@ -59,3 +59,14 @@ export async function producirReactivo(id: number, cantidad: number, usuarioId?:
   if (!res.ok) throw result;
   return result.data;
 }
+
+export async function moverReactivo(id: number, nuevoLaboratorioId: number, usuarioId?: number) {
+  const res = await fetch(`${API_URL}/inventario/reactivos/${id}/mover`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nuevoLaboratorioId, usuarioId }),
+  });
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.message || 'Error moviendo reactivo');
+  return result.data;
+}

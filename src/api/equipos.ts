@@ -48,3 +48,14 @@ export async function deleteEquipo(id: number) {
   const res = await fetch(`${API_URL}/inventario/equipos/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Error eliminando equipo');
 }
+
+export async function moverEquipo(id: number, nuevoLaboratorioId: number, usuarioId?: number) {
+  const res = await fetch(`${API_URL}/inventario/equipos/${id}/mover`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nuevoLaboratorioId, usuarioId }),
+  });
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.message || 'Error moviendo equipo');
+  return result.data;
+}

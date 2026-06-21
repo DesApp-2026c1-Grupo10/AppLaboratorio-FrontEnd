@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import {
   Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
-  TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions,
+  TableHead, TableRow, TableSortLabel, Dialog, DialogTitle, DialogContent, DialogActions,
   IconButton, Chip, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel, TablePagination,
 } from '@mui/material';
 import type { SnackbarState } from '../types/snackbar';
 import TableSkeleton from '../components/TableSkeleton';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, SwapHoriz as SwapHorizIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import EquipoDialog from '../components/equipos/EquipoDialog';
-import { getEquipos, createEquipo, updateEquipo, deleteEquipo } from '../api/equipos';
+import MoverDialog from '../components/MoverDialog';
+import { getEquipos, createEquipo, updateEquipo, deleteEquipo, moverEquipo } from '../api/equipos';
 import { getUsos } from '../api/usos';
 import { getLaboratorios } from '../api/laboratorios';
 import type { Equipo, UsoEquipo } from '../types/equipo';
@@ -35,6 +36,42 @@ export default function Equipos() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [total, setTotal] = useState(0);
+  const [moverItem, setMoverItem] = useState<Equipo | null>(null);
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(column); setSortOrder('asc'); }
+  };
+
+  const sortedEquipos = [...equipos].sort((a, b) => {
+    if (!sortBy) return 0;
+    let aV: any, bV: any;
+    switch (sortBy) {
+      case 'name': aV = a.name?.toLowerCase(); bV = b.name?.toLowerCase(); break;
+      case 'status': aV = a.status; bV = b.status; break;
+      case 'laboratorio': aV = a.laboratorio?.nombre?.toLowerCase(); bV = b.laboratorio?.nombre?.toLowerCase(); break;
+      case 'edificio': aV = a.laboratorio?.edificio?.toLowerCase(); bV = b.laboratorio?.edificio?.toLowerCase(); break;
+      case 'is_movable': aV = a.is_movable ? 1 : 0; bV = b.is_movable ? 1 : 0; break;
+      case 'ultimaRevision': aV = a.ultimaRevision; bV = b.ultimaRevision; break;
+      default: return 0;
+    }
+    if (aV == null) return 1;
+    if (bV == null) return -1;
+    return aV < bV ? (sortOrder === 'asc' ? -1 : 1) : aV > bV ? (sortOrder === 'asc' ? 1 : -1) : 0;
+  });
+
+  const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
+  const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
+
+  const handleMover = async (nuevoLaboratorioId: number) => {
+    if (!moverItem) return;
+    const updated = await moverEquipo(moverItem.id, nuevoLaboratorioId, usuarioLogueado?.id);
+    setEquipos((prev) => prev.map((eq) => (eq.id === updated.id ? updated : eq)));
+    setMoverItem(null);
+    setSnackbar({ msg: `Equipo movido a ${laboratorios.find((l) => l.id === nuevoLaboratorioId)?.nombre || ''}`, severity: 'success' });
+  };
 
   useEffect(() => {
     getLaboratorios().then(setLaboratorios).catch(console.error);
@@ -130,19 +167,31 @@ export default function Equipos() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell>Laboratorio</TableCell>
-                <TableCell>Edificio</TableCell>
-                <TableCell>Movible</TableCell>
-                <TableCell>Última Revisión</TableCell>
+                <TableCell sortDirection={sortBy === 'name' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'name'} direction={sortBy === 'name' ? sortOrder : 'asc'} onClick={() => handleSort('name')}>Nombre</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'status' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'status'} direction={sortBy === 'status' ? sortOrder : 'asc'} onClick={() => handleSort('status')}>Estado</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'laboratorio' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'laboratorio'} direction={sortBy === 'laboratorio' ? sortOrder : 'asc'} onClick={() => handleSort('laboratorio')}>Laboratorio</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'edificio' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'edificio'} direction={sortBy === 'edificio' ? sortOrder : 'asc'} onClick={() => handleSort('edificio')}>Edificio</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'is_movable' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'is_movable'} direction={sortBy === 'is_movable' ? sortOrder : 'asc'} onClick={() => handleSort('is_movable')}>Movible</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'ultimaRevision' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'ultimaRevision'} direction={sortBy === 'ultimaRevision' ? sortOrder : 'asc'} onClick={() => handleSort('ultimaRevision')}>Última Revisión</TableSortLabel>
+                </TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? <TableSkeleton columns={7} rows={5} />
               : equipos.length === 0 ? <TableRow><TableCell colSpan={7} align="center">No hay equipos</TableCell></TableRow>
-              : equipos.map((eq) => (
+              : sortedEquipos.map((eq) => (
                 <TableRow key={eq.id}>
                   <TableCell>{eq.name}</TableCell>
                   <TableCell><Chip label={eq.status} color={statusColor[eq.status] || 'default'} size="small" /></TableCell>
@@ -152,6 +201,7 @@ export default function Equipos() {
                   <TableCell>{eq.ultimaRevision ? new Date(eq.ultimaRevision).toLocaleDateString() : '-'}</TableCell>
                   <TableCell>
                     <IconButton size="small" onClick={() => verHistorial(eq.id)} title="Historial de uso"><HistoryIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => setMoverItem(eq)} title="Mover de laboratorio"><SwapHorizIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => openEdit(eq)}><EditIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => setDeleteDialog(eq.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                   </TableCell>
@@ -222,6 +272,16 @@ export default function Equipos() {
           <Button color="error" variant="contained" onClick={() => deleteDialog && handleDelete(deleteDialog)}>Eliminar</Button>
         </DialogActions>
       </Dialog>
+
+      <MoverDialog
+        open={!!moverItem}
+        itemName={moverItem?.name || ''}
+        itemTipo="Equipo"
+        origenNombre={moverItem?.laboratorio ? `${moverItem.laboratorio.nombre} (${moverItem.laboratorio.edificio || 'Sin edificio'})` : 'Sin laboratorio'}
+        laboratorios={laboratorios}
+        onConfirm={handleMover}
+        onClose={() => setMoverItem(null)}
+      />
 
       {snackbar && <Snackbar open autoHideDuration={3000} onClose={() => setSnackbar(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}><Alert severity={snackbar.severity}>{snackbar.msg}</Alert></Snackbar>}
     </AppLayout>

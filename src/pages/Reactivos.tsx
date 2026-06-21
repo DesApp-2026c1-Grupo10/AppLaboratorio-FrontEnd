@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import {
   Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
-  TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions,
+  TableHead, TableRow, TableSortLabel, Dialog, DialogTitle, DialogContent, DialogActions,
   IconButton, Chip, Snackbar, Alert, TablePagination,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, BuildCircle as BuildCircleIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, BuildCircle as BuildCircleIcon, SwapHoriz as SwapHorizIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import ReactivoDialog from '../components/reactivos/ReactivoDialog';
 import ProducirReactivoDialog from '../components/reactivos/ProducirReactivoDialog';
-import { getReactivos, createReactivo, updateReactivo, deleteReactivo } from '../api/reactivos';
+import MoverDialog from '../components/MoverDialog';
+import { getReactivos, createReactivo, updateReactivo, deleteReactivo, moverReactivo } from '../api/reactivos';
 import { getLaboratorios } from '../api/laboratorios';
 import type { SnackbarState } from '../types/snackbar';
 import TableSkeleton from '../components/TableSkeleton';
@@ -32,6 +33,45 @@ export default function Reactivos() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [total, setTotal] = useState(0);
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [moverItem, setMoverItem] = useState<Reactivo | null>(null);
+
+  const handleMover = async (nuevoLaboratorioId: number) => {
+    if (!moverItem) return;
+    const updated = await moverReactivo(moverItem.id, nuevoLaboratorioId, usuarioLogueado?.id);
+    setReactivos((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    setMoverItem(null);
+    setSnackbar({ msg: `Reactivo movido a ${laboratorios.find((l) => l.id === nuevoLaboratorioId)?.nombre || ''}`, severity: 'success' });
+  };
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedReactivos = [...reactivos].sort((a, b) => {
+    if (!sortBy) return 0;
+    let aVal: any, bVal: any;
+    switch (sortBy) {
+      case 'name': aVal = a.name?.toLowerCase(); bVal = b.name?.toLowerCase(); break;
+      case 'stock': aVal = a.stock; bVal = b.stock; break;
+      case 'unidadMedida': aVal = a.unidadMedida?.toLowerCase(); bVal = b.unidadMedida?.toLowerCase(); break;
+      case 'vencimiento': aVal = a.vencimiento; bVal = b.vencimiento; break;
+      case 'prep_time': aVal = a.prep_time; bVal = b.prep_time; break;
+      case 'laboratorio': aVal = a.laboratorio?.nombre?.toLowerCase(); bVal = b.laboratorio?.nombre?.toLowerCase(); break;
+      default: return 0;
+    }
+    if (aVal == null) return 1;
+    if (bVal == null) return -1;
+    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
   const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
@@ -115,20 +155,32 @@ export default function Reactivos() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Stock</TableCell>
-                <TableCell>Unidad</TableCell>
-                <TableCell>Vencimiento</TableCell>
-                <TableCell>Tiempo Prep. (min)</TableCell>
+                <TableCell sortDirection={sortBy === 'name' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'name'} direction={sortBy === 'name' ? sortOrder : 'asc'} onClick={() => handleSort('name')}>Nombre</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'stock' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'stock'} direction={sortBy === 'stock' ? sortOrder : 'asc'} onClick={() => handleSort('stock')}>Stock</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'unidadMedida' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'unidadMedida'} direction={sortBy === 'unidadMedida' ? sortOrder : 'asc'} onClick={() => handleSort('unidadMedida')}>Unidad</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'vencimiento' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'vencimiento'} direction={sortBy === 'vencimiento' ? sortOrder : 'asc'} onClick={() => handleSort('vencimiento')}>Vencimiento</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'prep_time' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'prep_time'} direction={sortBy === 'prep_time' ? sortOrder : 'asc'} onClick={() => handleSort('prep_time')}>Tiempo Prep. (min)</TableSortLabel>
+                </TableCell>
                 <TableCell>Composición</TableCell>
-                <TableCell>Laboratorio</TableCell>
+                <TableCell sortDirection={sortBy === 'laboratorio' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'laboratorio'} direction={sortBy === 'laboratorio' ? sortOrder : 'asc'} onClick={() => handleSort('laboratorio')}>Laboratorio</TableSortLabel>
+                </TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? <TableSkeleton columns={8} rows={5} />
               : reactivos.length === 0 ? <TableRow><TableCell colSpan={8} align="center">No hay reactivos</TableCell></TableRow>
-              : reactivos.map((r) => (
+              : sortedReactivos.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell>{r.name}</TableCell>
                   <TableCell>
@@ -155,9 +207,7 @@ export default function Reactivos() {
                     <IconButton size="small" onClick={() => navigate(`/movimientos?reactivoId=${r.id}`)} title="Ver movimientos">
                       <HistoryIcon fontSize="small" />
                     </IconButton>
-                    <IconButton size="small" onClick={() => setProducirReactivo(r)} title="Producir" color="secondary">
-                      <BuildCircleIcon fontSize="small" />
-                    </IconButton>
+                    <IconButton size="small" onClick={() => setMoverItem(r)} title="Mover de laboratorio"><SwapHorizIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => openEdit(r)}><EditIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => setDeleteDialog(r.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                   </TableCell>
@@ -208,6 +258,16 @@ export default function Reactivos() {
           <Button color="error" variant="contained" onClick={() => deleteDialog && handleDelete(deleteDialog)}>Eliminar</Button>
         </DialogActions>
       </Dialog>
+
+      <MoverDialog
+        open={!!moverItem}
+        itemName={moverItem?.name || ''}
+        itemTipo="Reactivo"
+        origenNombre={moverItem?.laboratorio ? `${moverItem.laboratorio.nombre} (${moverItem.laboratorio.edificio || 'Sin edificio'})` : 'Sin laboratorio'}
+        laboratorios={laboratorios}
+        onConfirm={handleMover}
+        onClose={() => setMoverItem(null)}
+      />
 
       {snackbar && <Snackbar open autoHideDuration={3000} onClose={() => setSnackbar(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}><Alert severity={snackbar.severity}>{snackbar.msg}</Alert></Snackbar>}
     </AppLayout>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Box, CircularProgress, Typography, Button, Table, TableBody, TableCell,
-  TableHead, TableRow, Chip, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel, TablePagination,
+  TableHead, TableRow, TableSortLabel, Chip, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel, TablePagination,
 } from '@mui/material';
 import type { SnackbarState } from '../types/snackbar';
 import TableSkeleton from '../components/TableSkeleton';
@@ -34,6 +34,29 @@ export default function Movimientos() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [total, setTotal] = useState(0);
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(column); setSortOrder('asc'); }
+  };
+
+  const sortedMovimientos = [...movimientos].sort((a, b) => {
+    if (!sortBy) return 0;
+    let aV: any, bV: any;
+    switch (sortBy) {
+      case 'fecha': aV = a.fecha; bV = b.fecha; break;
+      case 'tipoMovimiento': aV = a.tipoMovimiento; bV = b.tipoMovimiento; break;
+      case 'item': aV = (a.material?.name || a.reactivo?.name || '')?.toLowerCase(); bV = (b.material?.name || b.reactivo?.name || '')?.toLowerCase(); break;
+      case 'cantidad': aV = a.cantidad; bV = b.cantidad; break;
+      case 'responsable': aV = (a.usuario ? `${a.usuario.nombre} ${a.usuario.apellido}` : '')?.toLowerCase(); bV = (b.usuario ? `${b.usuario.nombre} ${b.usuario.apellido}` : '')?.toLowerCase(); break;
+      default: return 0;
+    }
+    if (aV == null) return 1;
+    if (bV == null) return -1;
+    return aV < bV ? (sortOrder === 'asc' ? -1 : 1) : aV > bV ? (sortOrder === 'asc' ? 1 : -1) : 0;
+  });
 
   useEffect(() => {
     getMateriales().then(setMateriales).catch(console.error);
@@ -140,18 +163,28 @@ export default function Movimientos() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Fecha</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell>Item</TableCell>
-                <TableCell>Cantidad</TableCell>
-                <TableCell>Responsable</TableCell>
+                <TableCell sortDirection={sortBy === 'fecha' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'fecha'} direction={sortBy === 'fecha' ? sortOrder : 'asc'} onClick={() => handleSort('fecha')}>Fecha</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'tipoMovimiento' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'tipoMovimiento'} direction={sortBy === 'tipoMovimiento' ? sortOrder : 'asc'} onClick={() => handleSort('tipoMovimiento')}>Tipo</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'item' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'item'} direction={sortBy === 'item' ? sortOrder : 'asc'} onClick={() => handleSort('item')}>Item</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'cantidad' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'cantidad'} direction={sortBy === 'cantidad' ? sortOrder : 'asc'} onClick={() => handleSort('cantidad')}>Cantidad</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'responsable' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'responsable'} direction={sortBy === 'responsable' ? sortOrder : 'asc'} onClick={() => handleSort('responsable')}>Responsable</TableSortLabel>
+                </TableCell>
                 <TableCell>Observación</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? <TableSkeleton columns={6} rows={5} />
               : movimientos.length === 0 ? <TableRow><TableCell colSpan={6} align="center">No hay movimientos</TableCell></TableRow>
-              : movimientos.map((m) => (
+              : sortedMovimientos.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell>{new Date(m.fecha).toLocaleDateString()}</TableCell>
                   <TableCell>

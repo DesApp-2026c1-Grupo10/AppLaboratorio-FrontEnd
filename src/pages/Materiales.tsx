@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import {
   Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
-  TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions,
+  TableHead, TableRow, TableSortLabel, Dialog, DialogTitle, DialogContent, DialogActions,
   IconButton, Chip, Snackbar, Alert, TablePagination,
 } from '@mui/material';
 import type { SnackbarState } from '../types/snackbar';
 import TableSkeleton from '../components/TableSkeleton';
 import { useNavigate } from 'react-router-dom';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, SwapHoriz as SwapHorizIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import MaterialDialog from '../components/materiales/MaterialDialog';
-import { getMateriales, createMaterial, updateMaterial, deleteMaterial } from '../api/materiales';
+import MoverDialog from '../components/MoverDialog';
+import { getMateriales, createMaterial, updateMaterial, deleteMaterial, moverMaterial } from '../api/materiales';
 import { getLaboratorios } from '../api/laboratorios';
 import type { Material } from '../types/material';
 import type { Laboratorio } from '../types/laboratorio';
@@ -29,6 +30,48 @@ export default function Materiales() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [total, setTotal] = useState(0);
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [moverItem, setMoverItem] = useState<Material | null>(null);
+
+  const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
+  const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
+
+  const handleMover = async (nuevoLaboratorioId: number) => {
+    if (!moverItem) return;
+    const updated = await moverMaterial(moverItem.id, nuevoLaboratorioId, usuarioLogueado?.id);
+    setMateriales((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+    setMoverItem(null);
+    setSnackbar({ msg: `Material movido a ${laboratorios.find((l) => l.id === nuevoLaboratorioId)?.nombre || ''}`, severity: 'success' });
+  };
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedMateriales = [...materiales].sort((a, b) => {
+    if (!sortBy) return 0;
+    let aVal: any, bVal: any;
+    switch (sortBy) {
+      case 'name': aVal = a.name?.toLowerCase(); bVal = b.name?.toLowerCase(); break;
+      case 'descripcion': aVal = a.descripcion?.toLowerCase(); bVal = b.descripcion?.toLowerCase(); break;
+      case 'stock': aVal = a.stock; bVal = b.stock; break;
+      case 'stockMinimo': aVal = a.stockMinimo; bVal = b.stockMinimo; break;
+      case 'unit': aVal = a.unit?.toLowerCase(); bVal = b.unit?.toLowerCase(); break;
+      case 'laboratorio': aVal = a.laboratorio?.nombre?.toLowerCase(); bVal = b.laboratorio?.nombre?.toLowerCase(); break;
+      default: return 0;
+    }
+    if (aVal == null) return 1;
+    if (bVal == null) return -1;
+    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   useEffect(() => {
     getLaboratorios().then(setLaboratorios).catch(console.error);
@@ -106,12 +149,24 @@ export default function Materiales() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Descripción</TableCell>
-                <TableCell>Stock</TableCell>
-                <TableCell>Stock Mínimo</TableCell>
-                <TableCell>Unidad</TableCell>
-                <TableCell>Laboratorio</TableCell>
+                <TableCell sortDirection={sortBy === 'name' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'name'} direction={sortBy === 'name' ? sortOrder : 'asc'} onClick={() => handleSort('name')}>Nombre</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'descripcion' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'descripcion'} direction={sortBy === 'descripcion' ? sortOrder : 'asc'} onClick={() => handleSort('descripcion')}>Descripción</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'stock' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'stock'} direction={sortBy === 'stock' ? sortOrder : 'asc'} onClick={() => handleSort('stock')}>Stock</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'stockMinimo' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'stockMinimo'} direction={sortBy === 'stockMinimo' ? sortOrder : 'asc'} onClick={() => handleSort('stockMinimo')}>Stock Mínimo</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'unit' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'unit'} direction={sortBy === 'unit' ? sortOrder : 'asc'} onClick={() => handleSort('unit')}>Unidad</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'laboratorio' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'laboratorio'} direction={sortBy === 'laboratorio' ? sortOrder : 'asc'} onClick={() => handleSort('laboratorio')}>Laboratorio</TableSortLabel>
+                </TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
@@ -120,7 +175,7 @@ export default function Materiales() {
                 <TableSkeleton columns={7} rows={5} />
               ) : materiales.length === 0 ? (
                 <TableRow><TableCell colSpan={7} align="center">No hay materiales</TableCell></TableRow>
-              ) : materiales.map((m) => (
+              ) : sortedMateriales.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell>{m.name}</TableCell>
                   <TableCell>{m.descripcion || '-'}</TableCell>
@@ -132,6 +187,7 @@ export default function Materiales() {
                   <TableCell>{m.laboratorio?.nombre || '-'}</TableCell>
                   <TableCell>
                     <IconButton size="small" onClick={() => navigate(`/movimientos?materialId=${m.id}`)} title="Ver movimientos"><HistoryIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => setMoverItem(m)} title="Mover de laboratorio"><SwapHorizIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => openEdit(m)}><EditIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => setDeleteDialog(m.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                   </TableCell>
@@ -168,6 +224,16 @@ export default function Materiales() {
           <Button color="error" variant="contained" onClick={() => deleteDialog && handleDelete(deleteDialog)}>Eliminar</Button>
         </DialogActions>
       </Dialog>
+
+      <MoverDialog
+        open={!!moverItem}
+        itemName={moverItem?.name || ''}
+        itemTipo="Material"
+        origenNombre={moverItem?.laboratorio ? `${moverItem.laboratorio.nombre} (${moverItem.laboratorio.edificio || 'Sin edificio'})` : 'Sin laboratorio'}
+        laboratorios={laboratorios}
+        onConfirm={handleMover}
+        onClose={() => setMoverItem(null)}
+      />
 
       {snackbar && <Snackbar open autoHideDuration={3000} onClose={() => setSnackbar(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}><Alert severity={snackbar.severity}>{snackbar.msg}</Alert></Snackbar>}
     </AppLayout>

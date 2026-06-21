@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Typography, Button, TextField, Table, TableBody, TableCell,
-  TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions,
+  TableHead, TableRow, TableSortLabel, Dialog, DialogTitle, DialogContent, DialogActions,
   IconButton, Chip, Snackbar, Alert, TablePagination,
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Science as ScienceIcon, BuildCircle as BuildCircleIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import SustanciaBasicaDialog from '../components/sustanciasBasicas/SustanciaBasicaDialog';
 import { getSustanciasBasicas, createSustanciaBasica, updateSustanciaBasica, deleteSustanciaBasica } from '../api/sustanciasBasicas';
@@ -24,6 +24,28 @@ export default function SustanciasBasicas() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [total, setTotal] = useState(0);
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(column); setSortOrder('asc'); }
+  };
+
+  const sorted = [...sustancias].sort((a, b) => {
+    if (!sortBy) return 0;
+    let aV: any, bV: any;
+    switch (sortBy) {
+      case 'name': aV = a.name?.toLowerCase(); bV = b.name?.toLowerCase(); break;
+      case 'stock': aV = a.stock; bV = b.stock; break;
+      case 'stockMinimo': aV = a.stockMinimo; bV = b.stockMinimo; break;
+      case 'unidadMedida': aV = a.unidadMedida?.toLowerCase(); bV = b.unidadMedida?.toLowerCase(); break;
+      default: return 0;
+    }
+    if (aV == null) return 1;
+    if (bV == null) return -1;
+    return aV < bV ? (sortOrder === 'asc' ? -1 : 1) : aV > bV ? (sortOrder === 'asc' ? 1 : -1) : 0;
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -34,28 +56,17 @@ export default function SustanciasBasicas() {
         setTotal(Array.isArray(result) ? result.length : (result?.total ?? 0));
       } catch {
         setSnackbar({ msg: 'Error cargando datos', severity: 'error' });
-      } finally {
-        setLoading(false);
-      }
+      } finally { setLoading(false); }
     };
     load();
   }, [search, page, rowsPerPage]);
 
-  const openCreate = () => {
-    setEditing(null);
-    setDialogOpen(true);
-  };
-
-  const openEdit = (s: SustanciaBasica) => {
-    setEditing(s);
-    setDialogOpen(true);
-  };
+  const openCreate = () => { setEditing(null); setDialogOpen(true); };
+  const openEdit = (s: SustanciaBasica) => { setEditing(s); setDialogOpen(true); };
 
   const handleSave = async (data: Record<string, any>) => {
     try {
-      const payload = {
-        ...data, stock: Number(data.stock), stockMinimo: Number(data.stockMinimo),
-      };
+      const payload = { ...data, stock: Number(data.stock), stockMinimo: Number(data.stockMinimo) };
       if (editing) {
         const updated = await updateSustanciaBasica(editing.id, payload);
         setSustancias((prev) => prev.map((s) => (s.id === editing.id ? updated : s)));
@@ -89,23 +100,33 @@ export default function SustanciasBasicas() {
         <Box className="inv-toolbar">
           <TextField size="small" placeholder="Buscar sustancia..." value={search} onChange={(e) => setSearch(e.target.value)} slotProps={{ input: { startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: '#94a3b8' }} /> } }} />
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nueva Sustancia</Button>
+          <Button variant="outlined" startIcon={<ScienceIcon />} onClick={() => setSnackbar({ msg: 'Funcionalidad en desarrollo', severity: 'info' })}>Crear Receta</Button>
+          <Button variant="outlined" startIcon={<BuildCircleIcon />} onClick={() => setSnackbar({ msg: 'Funcionalidad en desarrollo', severity: 'info' })}>Producir Reactivo</Button>
         </Box>
 
         <Box className="inv-table-container">
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Stock</TableCell>
-                <TableCell>Stock Mínimo</TableCell>
-                <TableCell>Unidad</TableCell>
+                <TableCell sortDirection={sortBy === 'name' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'name'} direction={sortBy === 'name' ? sortOrder : 'asc'} onClick={() => handleSort('name')}>Nombre</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'stock' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'stock'} direction={sortBy === 'stock' ? sortOrder : 'asc'} onClick={() => handleSort('stock')}>Stock</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'stockMinimo' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'stockMinimo'} direction={sortBy === 'stockMinimo' ? sortOrder : 'asc'} onClick={() => handleSort('stockMinimo')}>Stock Mínimo</TableSortLabel>
+                </TableCell>
+                <TableCell sortDirection={sortBy === 'unidadMedida' ? sortOrder : false}>
+                  <TableSortLabel active={sortBy === 'unidadMedida'} direction={sortBy === 'unidadMedida' ? sortOrder : 'asc'} onClick={() => handleSort('unidadMedida')}>Unidad</TableSortLabel>
+                </TableCell>
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? <TableSkeleton columns={5} rows={5} />
-              : sustancias.length === 0 ? <TableRow><TableCell colSpan={5} align="center">No hay sustancias básicas</TableCell></TableRow>
-              : sustancias.map((s) => (
+              : sorted.length === 0 ? <TableRow><TableCell colSpan={5} align="center">No hay sustancias básicas</TableCell></TableRow>
+              : sorted.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell>{s.name}</TableCell>
                   <TableCell>
@@ -134,12 +155,7 @@ export default function SustanciasBasicas() {
         </Box>
       </Box>
 
-      <SustanciaBasicaDialog
-        open={dialogOpen}
-        editing={editing}
-        onSave={handleSave}
-        onClose={() => setDialogOpen(false)}
-      />
+      <SustanciaBasicaDialog open={dialogOpen} editing={editing} onSave={handleSave} onClose={() => setDialogOpen(false)} />
 
       <Dialog open={deleteDialog !== null} onClose={() => setDeleteDialog(null)}>
         <DialogTitle>¿Eliminar sustancia básica?</DialogTitle>

@@ -99,7 +99,7 @@ export default function Inventario() {
               <CardContent>
                 <SwapHorizIcon sx={{ fontSize: 40, color: '#9c27b0' }} />
                 <Typography variant="h3">{stats.movimientos}</Typography>
-                <Typography color="text.secondary">Movimientos recientes</Typography>
+                <Typography color="text.secondary">Movimientos de stock</Typography>
               </CardContent>
             </Card>
           </Box>

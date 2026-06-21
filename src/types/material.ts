@@ -6,7 +6,7 @@ export interface Material {
   stockMinimo: number;
   unit?: string;
   laboratorioId?: number;
-  laboratorio?: { id: number; nombre: string };
+  laboratorio?: { id: number; nombre: string; edificio?: string };
   createdAt: string;
   updatedAt: string;
 }
