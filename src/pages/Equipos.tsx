@@ -6,13 +6,13 @@ import {
 } from '@mui/material';
 import type { SnackbarState } from '../types/snackbar';
 import TableSkeleton from '../components/TableSkeleton';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, SwapHoriz as SwapHorizIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import EquipoDialog from '../components/equipos/EquipoDialog';
-import MoverDialog from '../components/MoverDialog';
-import { getEquipos, createEquipo, updateEquipo, deleteEquipo, moverEquipo } from '../api/equipos';
+import { getEquipos, createEquipo, updateEquipo, deleteEquipo } from '../api/equipos';
 import { getUsos } from '../api/usos';
 import { getLaboratorios } from '../api/laboratorios';
+import { useWs } from '../context/WsContext';
 import type { Equipo, UsoEquipo } from '../types/equipo';
 import type { Laboratorio } from '../types/laboratorio';
 import '../styles/inventario.css';
@@ -22,6 +22,7 @@ const statusColor: Record<string, 'success' | 'info' | 'warning' | 'error'> = {
 };
 
 export default function Equipos() {
+  const { on } = useWs();
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([]);
   const [search, setSearch] = useState('');
@@ -36,7 +37,6 @@ export default function Equipos() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [total, setTotal] = useState(0);
-  const [moverItem, setMoverItem] = useState<Equipo | null>(null);
   const [sortBy, setSortBy] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
@@ -65,33 +65,35 @@ export default function Equipos() {
   const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
   const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
 
-  const handleMover = async (nuevoLaboratorioId: number) => {
-    if (!moverItem) return;
-    const updated = await moverEquipo(moverItem.id, nuevoLaboratorioId, usuarioLogueado?.id);
-    setEquipos((prev) => prev.map((eq) => (eq.id === updated.id ? updated : eq)));
-    setMoverItem(null);
-    setSnackbar({ msg: `Equipo movido a ${laboratorios.find((l) => l.id === nuevoLaboratorioId)?.nombre || ''}`, severity: 'success' });
-  };
-
   useEffect(() => {
     getLaboratorios().then(setLaboratorios).catch(console.error);
   }, []);
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const result = await getEquipos(search || undefined, estadoFilter || undefined, page + 1, rowsPerPage);
+      setEquipos(Array.isArray(result) ? result : (result?.data ?? []));
+      setTotal(Array.isArray(result) ? result.length : (result?.total ?? 0));
+    } catch {
+      setSnackbar({ msg: 'Error cargando datos', severity: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const result = await getEquipos(search || undefined, estadoFilter || undefined, page + 1, rowsPerPage);
-        setEquipos(Array.isArray(result) ? result : (result?.data ?? []));
-        setTotal(Array.isArray(result) ? result.length : (result?.total ?? 0));
-      } catch {
-        setSnackbar({ msg: 'Error cargando datos', severity: 'error' });
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    loadData();
   }, [search, estadoFilter, page, rowsPerPage]);
+
+  useEffect(() => {
+    const unsub = on('INVENTARIO_MODIFICADO', (data) => {
+      if (data.tipo === 'equipo') {
+        loadData();
+      }
+    });
+    return unsub;
+  }, [on]);
 
   const openCreate = () => {
     setEditing(null);
@@ -201,7 +203,6 @@ export default function Equipos() {
                   <TableCell>{eq.ultimaRevision ? new Date(eq.ultimaRevision).toLocaleDateString() : '-'}</TableCell>
                   <TableCell>
                     <IconButton size="small" onClick={() => verHistorial(eq.id)} title="Historial de uso"><HistoryIcon fontSize="small" /></IconButton>
-                    <IconButton size="small" onClick={() => setMoverItem(eq)} title="Mover de laboratorio"><SwapHorizIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => openEdit(eq)}><EditIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => setDeleteDialog(eq.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                   </TableCell>
@@ -272,16 +273,6 @@ export default function Equipos() {
           <Button color="error" variant="contained" onClick={() => deleteDialog && handleDelete(deleteDialog)}>Eliminar</Button>
         </DialogActions>
       </Dialog>
-
-      <MoverDialog
-        open={!!moverItem}
-        itemName={moverItem?.name || ''}
-        itemTipo="Equipo"
-        origenNombre={moverItem?.laboratorio ? `${moverItem.laboratorio.nombre} (${moverItem.laboratorio.edificio || 'Sin edificio'})` : 'Sin laboratorio'}
-        laboratorios={laboratorios}
-        onConfirm={handleMover}
-        onClose={() => setMoverItem(null)}
-      />
 
       {snackbar && <Snackbar open autoHideDuration={3000} onClose={() => setSnackbar(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}><Alert severity={snackbar.severity}>{snackbar.msg}</Alert></Snackbar>}
     </AppLayout>

@@ -4,7 +4,7 @@ import {
   TableHead, TableRow, TableSortLabel, Dialog, DialogTitle, DialogContent, DialogActions,
   IconButton, Chip, Snackbar, Alert, TablePagination,
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Science as ScienceIcon, BuildCircle as BuildCircleIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import SustanciaBasicaDialog from '../components/sustanciasBasicas/SustanciaBasicaDialog';
 import { getSustanciasBasicas, createSustanciaBasica, updateSustanciaBasica, deleteSustanciaBasica } from '../api/sustanciasBasicas';
@@ -100,8 +100,7 @@ export default function SustanciasBasicas() {
         <Box className="inv-toolbar">
           <TextField size="small" placeholder="Buscar sustancia..." value={search} onChange={(e) => setSearch(e.target.value)} slotProps={{ input: { startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: '#94a3b8' }} /> } }} />
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nueva Sustancia</Button>
-          <Button variant="outlined" startIcon={<ScienceIcon />} onClick={() => setSnackbar({ msg: 'Funcionalidad en desarrollo', severity: 'info' })}>Crear Receta</Button>
-          <Button variant="outlined" startIcon={<BuildCircleIcon />} onClick={() => setSnackbar({ msg: 'Funcionalidad en desarrollo', severity: 'info' })}>Producir Reactivo</Button>
+
         </Box>
 
         <Box className="inv-table-container">

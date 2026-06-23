@@ -1,7 +1,7 @@
-import { API_URL } from './config';
+import { API_URL, authFetch } from './config';
 
 export async function getLaboratorios() {
-  const response = await fetch(`${API_URL}/laboratorios?_t=${Date.now()}`);
+  const response = await authFetch(`${API_URL}/laboratorios?_t=${Date.now()}`);
   if (!response.ok) throw new Error("Error obteniendo laboratorios");
   
   const result = await response.json();
@@ -10,9 +10,8 @@ export async function getLaboratorios() {
 }
 
 export async function createLaboratorio(laboratorio: Record<string, any>) {
-  const response = await fetch(`${API_URL}/laboratorios`, {
+  const response = await authFetch(`${API_URL}/laboratorios`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(laboratorio),
   });
   if (!response.ok) throw new Error("Error creando laboratorio");
@@ -21,9 +20,8 @@ export async function createLaboratorio(laboratorio: Record<string, any>) {
 }
 
 export async function updateLaboratorio(id: number, data: Record<string, any>) {
-  const response = await fetch(`${API_URL}/laboratorios/${id}`, {
+  const response = await authFetch(`${API_URL}/laboratorios/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!response.ok) throw new Error("Error actualizando laboratorio");

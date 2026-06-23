@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Snackbar, Alert, Box, CircularProgress, Switch, FormControlLabel, Button, FormControl, InputLabel, Select, MenuItem, Tab, Tabs, Chip } from '@mui/material';
 import type { SnackbarState } from '../types/snackbar';
 import type { ActividadPredefinida } from '../types/actividadPredefinida';
@@ -12,6 +12,8 @@ import RevisionPendienteDialog from '../components/pedidos/RevisionPendienteDial
 import { getPedidos, createPedido, aprobarPedido, rechazarPedido, finalizarPedido, crearRevision, getPedidosConRevisionPendiente } from '../api/pedidos';
 import { getLaboratorios } from '../api/laboratorios';
 import { getUsuarios } from '../api/usuarios';
+import { useWebSocket } from '../hooks/useWebSocket';
+import { useWs } from '../context/WsContext';
 import type { Pedido } from '../types/pedido';
 import type { Laboratorio } from '../types/laboratorio';
 import type { Usuario } from '../types/usuario';
@@ -51,6 +53,9 @@ export default function Pedidos() {
   const [filtroEstado, setFiltroEstado] = useState('');
   const [cardsLimit, setCardsLimit] = useState(CARDS_POR_PAGINA);
 
+  const wsUrl = `ws://${window.location.hostname}:3005/ws`;
+  const { connected, on } = useWs();
+
   const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
   const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
   const esAdmin = usuarioLogueado?.rol === 'Desarrollador';
@@ -58,6 +63,20 @@ export default function Pedidos() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    const unsubs = [
+      on('PEDIDO_CREADO', () => { loadData(); }),
+      on('PEDIDO_APROBADO', () => { loadData(); }),
+      on('PEDIDO_RECHAZADO', () => { loadData(); }),
+      on('PEDIDO_FINALIZADO', () => { loadData(); }),
+      on('PEDIDO_MODIFICADO', () => { loadData(); }),
+      on('REVISION_CREADA', () => { loadData(); }),
+      on('REVISION_ACEPTADA', () => { loadData(); }),
+      on('REVISION_RECHAZADA', () => { loadData(); }),
+    ];
+    return () => unsubs.forEach((u) => u());
+  }, [on]);
 
   async function loadData() {
     try {

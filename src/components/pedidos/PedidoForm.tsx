@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Box, Button, FormControl, InputLabel, MenuItem, Select, TextField,
-  Chip, Typography, Autocomplete, IconButton, Alert, Slider, Tooltip,
+  Chip, Typography, Autocomplete, IconButton, Alert, Tooltip,
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 import { Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
@@ -212,33 +212,17 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
           renderInput={(params) => <TextField {...params} size="small" placeholder="Agregar reactivo..." />}
           fullWidth
         />
-        {selectedReactivos.map((r) => {
-          const esLiquido = r.unidadMedida?.toLowerCase().includes('litro') || r.unidadMedida?.toLowerCase().includes('l') || r.unidadMedida === 'ml';
-          return (
+        {selectedReactivos.map((r) => (
             <Box key={r.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
               <Chip label={r.name} color={r.cantidad > r.stock ? 'error' : 'secondary'} size="small" />
-              {esLiquido ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: 200 }}>
-                  <Slider
-                    value={r.cantidad}
-                    onChange={(_, val) => setSelectedReactivos(selectedReactivos.map((sr) => sr.id === r.id ? { ...sr, cantidad: val as number } : sr))}
-                    min={0}
-                    max={r.stock || 10}
-                    step={1}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={(v) => `${v} ${r.unidadMedida || 'L'}`}
-                    sx={{ flex: 1 }}
-                  />
-                  <Typography variant="caption" sx={{ minWidth: 60 }}>{r.cantidad} {r.unidadMedida || 'L'}</Typography>
-                </Box>
-              ) : (
-                <TextField type="number" size="small" value={r.cantidad} onChange={(e) => setSelectedReactivos(selectedReactivos.map((sr) => sr.id === r.id ? { ...sr, cantidad: Number(e.target.value) } : sr))} slotProps={{ htmlInput: { min: 1, max: r.stock } }} sx={{ width: 80 }} />
-              )}
+              <TextField type="number" size="small" value={r.cantidad}
+                onChange={(e) => setSelectedReactivos(selectedReactivos.map((sr) => sr.id === r.id ? { ...sr, cantidad: Number(e.target.value) } : sr))}
+                slotProps={{ htmlInput: { min: 1, max: r.stock } }} sx={{ width: 100 }}
+                InputProps={{ endAdornment: <Typography variant="caption" color="text.secondary">{r.unidadMedida || 'u'}</Typography> }} />
               <Typography variant="caption" color="text.secondary">disp: {r.stock}</Typography>
               <IconButton size="small" onClick={() => setSelectedReactivos(selectedReactivos.filter((sr) => sr.id !== r.id))} color="error"><DeleteIcon fontSize="small" /></IconButton>
             </Box>
-          );
-        })}
+          ))}
       </Box>
 
       {/* Equipos */}

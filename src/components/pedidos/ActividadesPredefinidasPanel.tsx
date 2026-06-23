@@ -47,7 +47,7 @@ export default function ActividadesPredefinidasPanel({ open, laboratorios, onSel
     }
   }, [open]);
 
-  const misActividades = actividades.filter((a) => a.usuarioId === usuarioLogueado?.id);
+  const misActividades = actividades;
 
   const refresh = async () => {
     const updated = await getActividadesPredefinidas();
@@ -68,9 +68,9 @@ export default function ActividadesPredefinidasPanel({ open, laboratorios, onSel
         cantidadAlumnos: data.cantidadAlumnos,
         descripcion: data.descripcion || '',
         config,
-        usuarioId: usuarioLogueado.id,
+        usuarioId: editingActividad.usuarioId,
       });
-      setSnackbar({ msg: 'Actividad actualizada', severity: 'success' });
+      setSnackbar({ msg: 'Actividad editada', severity: 'success' });
     } else {
       await createActividadPredefinida({
         nombre: data.nombre,

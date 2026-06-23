@@ -1,4 +1,4 @@
-import { API_URL } from './config';
+import { API_URL, authFetch } from './config';
 
 export async function getSustanciasBasicas(search?: string, page?: number, limit?: number) {
   const params = new URLSearchParams();
@@ -7,7 +7,7 @@ export async function getSustanciasBasicas(search?: string, page?: number, limit
   if (limit) params.set('limit', String(limit));
   params.set('_t', String(Date.now()));
   const qs = params.toString();
-  const res = await fetch(`${API_URL}/inventario/sustancias-basicas${qs ? `?${qs}` : ''}`);
+  const res = await authFetch(`${API_URL}/inventario/sustancias-basicas${qs ? `?${qs}` : ''}`);
   if (!res.ok) throw new Error('Error obteniendo sustancias básicas');
   const result = await res.json();
   if (page) return result;
@@ -15,9 +15,8 @@ export async function getSustanciasBasicas(search?: string, page?: number, limit
 }
 
 export async function createSustanciaBasica(data: Record<string, any>) {
-  const res = await fetch(`${API_URL}/inventario/sustancias-basicas`, {
+  const res = await authFetch(`${API_URL}/inventario/sustancias-basicas`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   const result = await res.json();
@@ -26,9 +25,8 @@ export async function createSustanciaBasica(data: Record<string, any>) {
 }
 
 export async function updateSustanciaBasica(id: number, data: Record<string, any>) {
-  const res = await fetch(`${API_URL}/inventario/sustancias-basicas/${id}`, {
+  const res = await authFetch(`${API_URL}/inventario/sustancias-basicas/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   const result = await res.json();
@@ -37,6 +35,6 @@ export async function updateSustanciaBasica(id: number, data: Record<string, any
 }
 
 export async function deleteSustanciaBasica(id: number) {
-  const res = await fetch(`${API_URL}/inventario/sustancias-basicas/${id}`, { method: 'DELETE' });
+  const res = await authFetch(`${API_URL}/inventario/sustancias-basicas/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Error eliminando sustancia básica');
 }

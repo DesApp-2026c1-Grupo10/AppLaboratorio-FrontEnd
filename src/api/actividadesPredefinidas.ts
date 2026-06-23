@@ -1,17 +1,16 @@
-import { API_URL } from './config';
+import { API_URL, authFetch } from './config';
 import type { ActividadPredefinida } from '../types/actividadPredefinida';
 
 export async function getActividadesPredefinidas(): Promise<ActividadPredefinida[]> {
-  const res = await fetch(`${API_URL}/actividades-predefinidas?_t=${Date.now()}`);
+  const res = await authFetch(`${API_URL}/actividades-predefinidas?_t=${Date.now()}`);
   if (!res.ok) throw new Error('Error obteniendo actividades');
   const result = await res.json();
   return result.data || [];
 }
 
 export async function createActividadPredefinida(data: Record<string, any>): Promise<ActividadPredefinida> {
-  const res = await fetch(`${API_URL}/actividades-predefinidas`, {
+  const res = await authFetch(`${API_URL}/actividades-predefinidas`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   const result = await res.json();
@@ -20,9 +19,8 @@ export async function createActividadPredefinida(data: Record<string, any>): Pro
 }
 
 export async function updateActividadPredefinida(id: number, data: Record<string, any>): Promise<ActividadPredefinida> {
-  const res = await fetch(`${API_URL}/actividades-predefinidas/${id}`, {
+  const res = await authFetch(`${API_URL}/actividades-predefinidas/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   const result = await res.json();
@@ -31,6 +29,6 @@ export async function updateActividadPredefinida(id: number, data: Record<string
 }
 
 export async function deleteActividadPredefinida(id: number) {
-  const res = await fetch(`${API_URL}/actividades-predefinidas/${id}`, { method: 'DELETE' });
+  const res = await authFetch(`${API_URL}/actividades-predefinidas/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Error eliminando actividad');
 }

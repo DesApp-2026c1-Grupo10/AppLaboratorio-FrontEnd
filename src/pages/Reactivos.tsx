@@ -5,13 +5,13 @@ import {
   IconButton, Chip, Snackbar, Alert, TablePagination,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, BuildCircle as BuildCircleIcon, SwapHoriz as SwapHorizIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, BuildCircle as BuildCircleIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import ReactivoDialog from '../components/reactivos/ReactivoDialog';
 import ProducirReactivoDialog from '../components/reactivos/ProducirReactivoDialog';
-import MoverDialog from '../components/MoverDialog';
-import { getReactivos, createReactivo, updateReactivo, deleteReactivo, moverReactivo } from '../api/reactivos';
+import { getReactivos, createReactivo, updateReactivo, deleteReactivo } from '../api/reactivos';
 import { getLaboratorios } from '../api/laboratorios';
+import { useWs } from '../context/WsContext';
 import type { SnackbarState } from '../types/snackbar';
 import TableSkeleton from '../components/TableSkeleton';
 import type { Reactivo } from '../types/reactivo';
@@ -20,6 +20,7 @@ import '../styles/inventario.css';
 
 export default function Reactivos() {
   const navigate = useNavigate();
+  const { on } = useWs();
   const [reactivos, setReactivos] = useState<Reactivo[]>([]);
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([]);
   const [search, setSearch] = useState('');
@@ -35,15 +36,6 @@ export default function Reactivos() {
   const [total, setTotal] = useState(0);
   const [sortBy, setSortBy] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [moverItem, setMoverItem] = useState<Reactivo | null>(null);
-
-  const handleMover = async (nuevoLaboratorioId: number) => {
-    if (!moverItem) return;
-    const updated = await moverReactivo(moverItem.id, nuevoLaboratorioId, usuarioLogueado?.id);
-    setReactivos((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-    setMoverItem(null);
-    setSnackbar({ msg: `Reactivo movido a ${laboratorios.find((l) => l.id === nuevoLaboratorioId)?.nombre || ''}`, severity: 'success' });
-  };
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -80,21 +72,31 @@ export default function Reactivos() {
     getLaboratorios().then(setLaboratorios).catch(console.error);
   }, []);
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const result = await getReactivos(search || undefined, vencFilter || undefined, page + 1, rowsPerPage);
+      setReactivos(Array.isArray(result) ? result : (result?.data ?? []));
+      setTotal(Array.isArray(result) ? result.length : (result?.total ?? 0));
+    } catch {
+      setSnackbar({ msg: 'Error cargando datos', severity: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const result = await getReactivos(search || undefined, vencFilter || undefined, page + 1, rowsPerPage);
-        setReactivos(Array.isArray(result) ? result : (result?.data ?? []));
-        setTotal(Array.isArray(result) ? result.length : (result?.total ?? 0));
-      } catch {
-        setSnackbar({ msg: 'Error cargando datos', severity: 'error' });
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    loadData();
   }, [search, vencFilter, page, rowsPerPage]);
+
+  useEffect(() => {
+    const unsub = on('INVENTARIO_MODIFICADO', (data) => {
+      if (data.tipo === 'reactivo') {
+        loadData();
+      }
+    });
+    return unsub;
+  }, [on]);
 
   const openCreate = () => {
     setEditing(null);
@@ -204,10 +206,12 @@ export default function Reactivos() {
                   </TableCell>
                   <TableCell>{r.laboratorio?.nombre || '-'}</TableCell>
                   <TableCell>
+                    {r.composicion && r.composicion.length > 0 && (
+                      <IconButton size="small" onClick={() => setProducirReactivo(r)} title="Producir reactivo" color="primary"><BuildCircleIcon fontSize="small" /></IconButton>
+                    )}
                     <IconButton size="small" onClick={() => navigate(`/movimientos?reactivoId=${r.id}`)} title="Ver movimientos">
                       <HistoryIcon fontSize="small" />
                     </IconButton>
-                    <IconButton size="small" onClick={() => setMoverItem(r)} title="Mover de laboratorio"><SwapHorizIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => openEdit(r)}><EditIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => setDeleteDialog(r.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                   </TableCell>
@@ -258,16 +262,6 @@ export default function Reactivos() {
           <Button color="error" variant="contained" onClick={() => deleteDialog && handleDelete(deleteDialog)}>Eliminar</Button>
         </DialogActions>
       </Dialog>
-
-      <MoverDialog
-        open={!!moverItem}
-        itemName={moverItem?.name || ''}
-        itemTipo="Reactivo"
-        origenNombre={moverItem?.laboratorio ? `${moverItem.laboratorio.nombre} (${moverItem.laboratorio.edificio || 'Sin edificio'})` : 'Sin laboratorio'}
-        laboratorios={laboratorios}
-        onConfirm={handleMover}
-        onClose={() => setMoverItem(null)}
-      />
 
       {snackbar && <Snackbar open autoHideDuration={3000} onClose={() => setSnackbar(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}><Alert severity={snackbar.severity}>{snackbar.msg}</Alert></Snackbar>}
     </AppLayout>

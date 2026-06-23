@@ -1,4 +1,4 @@
-import { API_URL } from './config';
+import { API_URL, authFetch } from './config';
 
 export async function getMovimientos(tipo?: string, materialId?: number, reactivoId?: number, page?: number, limit?: number) {
   const params = new URLSearchParams();
@@ -9,7 +9,7 @@ export async function getMovimientos(tipo?: string, materialId?: number, reactiv
   if (limit) params.set('limit', String(limit));
   params.set('_t', String(Date.now()));
   const qs = params.toString();
-  const res = await fetch(`${API_URL}/inventario/movimientos${qs ? `?${qs}` : ''}`);
+  const res = await authFetch(`${API_URL}/inventario/movimientos${qs ? `?${qs}` : ''}`);
   if (!res.ok) throw new Error('Error obteniendo movimientos');
   const result = await res.json();
   if (page) return result;
@@ -25,9 +25,8 @@ export async function createMovimiento(data: {
   materialId?: number;
   reactivoId?: number;
 }) {
-  const res = await fetch(`${API_URL}/inventario/movimientos`, {
+  const res = await authFetch(`${API_URL}/inventario/movimientos`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   const result = await res.json();

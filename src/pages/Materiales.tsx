@@ -7,18 +7,19 @@ import {
 import type { SnackbarState } from '../types/snackbar';
 import TableSkeleton from '../components/TableSkeleton';
 import { useNavigate } from 'react-router-dom';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, SwapHoriz as SwapHorizIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import MaterialDialog from '../components/materiales/MaterialDialog';
-import MoverDialog from '../components/MoverDialog';
-import { getMateriales, createMaterial, updateMaterial, deleteMaterial, moverMaterial } from '../api/materiales';
+import { getMateriales, createMaterial, updateMaterial, deleteMaterial } from '../api/materiales';
 import { getLaboratorios } from '../api/laboratorios';
+import { useWs } from '../context/WsContext';
 import type { Material } from '../types/material';
 import type { Laboratorio } from '../types/laboratorio';
 import '../styles/inventario.css';
 
 export default function Materiales() {
   const navigate = useNavigate();
+  const { on } = useWs();
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([]);
   const [search, setSearch] = useState('');
@@ -32,18 +33,9 @@ export default function Materiales() {
   const [total, setTotal] = useState(0);
   const [sortBy, setSortBy] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [moverItem, setMoverItem] = useState<Material | null>(null);
 
   const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
   const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
-
-  const handleMover = async (nuevoLaboratorioId: number) => {
-    if (!moverItem) return;
-    const updated = await moverMaterial(moverItem.id, nuevoLaboratorioId, usuarioLogueado?.id);
-    setMateriales((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
-    setMoverItem(null);
-    setSnackbar({ msg: `Material movido a ${laboratorios.find((l) => l.id === nuevoLaboratorioId)?.nombre || ''}`, severity: 'success' });
-  };
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -78,19 +70,29 @@ export default function Materiales() {
   }, []);
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const result = await getMateriales(search || undefined, page + 1, rowsPerPage);
-        setMateriales(Array.isArray(result) ? result : (result?.data ?? []));
-        setTotal(Array.isArray(result) ? result.length : (result?.total ?? 0));
-      } catch {
-        setSnackbar({ msg: 'Error cargando datos', severity: 'error' });
-      } finally {
-        setLoading(false);
+    const unsub = on('INVENTARIO_MODIFICADO', (data) => {
+      if (data.tipo === 'material') {
+        loadData();
       }
-    };
-    load();
+    });
+    return unsub;
+  }, [on]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const result = await getMateriales(search || undefined, page + 1, rowsPerPage);
+      setMateriales(Array.isArray(result) ? result : (result?.data ?? []));
+      setTotal(Array.isArray(result) ? result.length : (result?.total ?? 0));
+    } catch {
+      setSnackbar({ msg: 'Error cargando datos', severity: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, [search, page, rowsPerPage]);
 
   const openCreate = () => {
@@ -187,7 +189,6 @@ export default function Materiales() {
                   <TableCell>{m.laboratorio?.nombre || '-'}</TableCell>
                   <TableCell>
                     <IconButton size="small" onClick={() => navigate(`/movimientos?materialId=${m.id}`)} title="Ver movimientos"><HistoryIcon fontSize="small" /></IconButton>
-                    <IconButton size="small" onClick={() => setMoverItem(m)} title="Mover de laboratorio"><SwapHorizIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => openEdit(m)}><EditIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => setDeleteDialog(m.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                   </TableCell>
@@ -224,16 +225,6 @@ export default function Materiales() {
           <Button color="error" variant="contained" onClick={() => deleteDialog && handleDelete(deleteDialog)}>Eliminar</Button>
         </DialogActions>
       </Dialog>
-
-      <MoverDialog
-        open={!!moverItem}
-        itemName={moverItem?.name || ''}
-        itemTipo="Material"
-        origenNombre={moverItem?.laboratorio ? `${moverItem.laboratorio.nombre} (${moverItem.laboratorio.edificio || 'Sin edificio'})` : 'Sin laboratorio'}
-        laboratorios={laboratorios}
-        onConfirm={handleMover}
-        onClose={() => setMoverItem(null)}
-      />
 
       {snackbar && <Snackbar open autoHideDuration={3000} onClose={() => setSnackbar(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}><Alert severity={snackbar.severity}>{snackbar.msg}</Alert></Snackbar>}
     </AppLayout>

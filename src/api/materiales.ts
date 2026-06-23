@@ -1,4 +1,4 @@
-import { API_URL } from './config';
+import { API_URL, authFetch } from './config';
 
 export async function getMateriales(search?: string, page?: number, limit?: number) {
   const params = new URLSearchParams();
@@ -7,7 +7,7 @@ export async function getMateriales(search?: string, page?: number, limit?: numb
   if (limit) params.set('limit', String(limit));
   params.set('_t', String(Date.now()));
   const qs = params.toString();
-  const res = await fetch(`${API_URL}/inventario/materiales${qs ? `?${qs}` : ''}`);
+  const res = await authFetch(`${API_URL}/inventario/materiales${qs ? `?${qs}` : ''}`);
   if (!res.ok) throw new Error('Error obteniendo materiales');
   const result = await res.json();
   if (page) return result;
@@ -15,16 +15,15 @@ export async function getMateriales(search?: string, page?: number, limit?: numb
 }
 
 export async function getMaterial(id: number) {
-  const res = await fetch(`${API_URL}/inventario/materiales/${id}?_t=${Date.now()}`);
+  const res = await authFetch(`${API_URL}/inventario/materiales/${id}?_t=${Date.now()}`);
   if (!res.ok) throw new Error('Material no encontrado');
   const result = await res.json();
   return result.data;
 }
 
 export async function createMaterial(data: Record<string, any>) {
-  const res = await fetch(`${API_URL}/inventario/materiales`, {
+  const res = await authFetch(`${API_URL}/inventario/materiales`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   const result = await res.json();
@@ -33,9 +32,8 @@ export async function createMaterial(data: Record<string, any>) {
 }
 
 export async function updateMaterial(id: number, data: Record<string, any>) {
-  const res = await fetch(`${API_URL}/inventario/materiales/${id}`, {
+  const res = await authFetch(`${API_URL}/inventario/materiales/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   const result = await res.json();
@@ -44,14 +42,13 @@ export async function updateMaterial(id: number, data: Record<string, any>) {
 }
 
 export async function deleteMaterial(id: number) {
-  const res = await fetch(`${API_URL}/inventario/materiales/${id}`, { method: 'DELETE' });
+  const res = await authFetch(`${API_URL}/inventario/materiales/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Error eliminando material');
 }
 
 export async function moverMaterial(id: number, nuevoLaboratorioId: number, usuarioId?: number) {
-  const res = await fetch(`${API_URL}/inventario/materiales/${id}/mover`, {
+  const res = await authFetch(`${API_URL}/inventario/materiales/${id}/mover`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nuevoLaboratorioId, usuarioId }),
   });
   const result = await res.json();
