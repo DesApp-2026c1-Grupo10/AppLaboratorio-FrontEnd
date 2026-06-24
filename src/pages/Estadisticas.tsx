@@ -1,32 +1,91 @@
 import { useEffect, useState } from 'react';
 import {
-  Box, Typography, Card, CardContent, Chip, Table, TableBody,
-  TableCell, TableHead, TableRow, TableContainer, Paper, Grid,
+  Box, Typography, Card, CardContent, Chip, Grid,
 } from '@mui/material';
+import EventNoteIcon from '@mui/icons-material/EventNote';
+import ScienceIcon from '@mui/icons-material/Science';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import {
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer,
+} from 'recharts';
 import AppLayout from '../components/layout/AppLayout';
 import { getEstadisticasResumen } from '../api/estadisticas';
 import type { EstadisticasData } from '../types/estadisticas';
 
-const estadoColors: Record<string, 'warning' | 'success' | 'error' | 'info' | 'default'> = {
-  Pendiente: 'warning',
-  Aprobado: 'success',
-  Rechazado: 'error',
-  Finalizado: 'info',
-  Cancelado: 'default',
+const ESTADO_COLORS: Record<string, string> = {
+  Pendiente: '#F59E0B',
+  Aprobado: '#10B981',
+  Rechazado: '#EF4444',
+  Finalizado: '#3B82F6',
+  Cancelado: '#6B7280',
 };
 
+const CHART_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'];
+
+const BAR_ANIMATION_DURATION = 1200;
+
+const Gradients = () => (
+  <defs>
+    <linearGradient id="gradLab" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stopColor="#6366F1" />
+      <stop offset="100%" stopColor="#A5B4FC" />
+    </linearGradient>
+    <linearGradient id="gradEquip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor="#8B5CF6" />
+      <stop offset="100%" stopColor="#C4B5FD" />
+    </linearGradient>
+    <linearGradient id="gradMat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor="#EC4899" />
+      <stop offset="100%" stopColor="#F9A8D4" />
+    </linearGradient>
+    <linearGradient id="gradReac" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor="#F59E0B" />
+      <stop offset="100%" stopColor="#FDE68A" />
+    </linearGradient>
+    <linearGradient id="gradSust" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stopColor="#10B981" />
+      <stop offset="100%" stopColor="#6EE7B7" />
+    </linearGradient>
+  </defs>
+);
+
 export default function Estadisticas() {
-  const [data, setData] = useState<EstadisticasData | null>(null);
+  const [chartData, setChartData] = useState<EstadisticasData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getEstadisticasResumen()
-      .then(setData)
+      .then(setChartData)
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <AppLayout><Typography sx={{ p: 4 }}>Cargando estadísticas...</Typography></AppLayout>;
+
+  const pedidosPorEstado = Object.entries(chartData?.resumen.pedidosPorEstado ?? {}).map(
+    ([name, value]) => ({ name, value })
+  );
+
+  const totalPedidos = chartData?.resumen.totalPedidos ?? 0;
+  const barChartHeight = 300;
+
+  const CustomPieLabel = ({ cx, cy }: any) => (
+    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
+      <tspan x={cx} y={cy - 8} fontSize={28} fontWeight={700} fill="#0B1739">{totalPedidos}</tspan>
+      <tspan x={cx} y={cy + 16} fontSize={13} fill="#64748B">pedidos</tspan>
+    </text>
+  );
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <Box sx={{ bgcolor: '#1E293B', color: '#fff', px: 1.5, py: 1, borderRadius: 1, fontSize: 13 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>{payload[0].name}</Typography>
+        <Typography variant="body2">{payload[0].value} pedidos</Typography>
+      </Box>
+    );
+  };
 
   return (
     <AppLayout>
@@ -34,197 +93,143 @@ export default function Estadisticas() {
         <Typography variant="h4" sx={{ fontWeight: 700, color: '#0B1739', mb: 1 }}>Estadísticas de Uso</Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>Resumen semanal y general del sistema</Typography>
 
-        {/* Resumen Semanal */}
-        <Typography variant="h5" sx={{ mb: 2, mt: 2 }}>Resumen Semanal</Typography>
         <Grid container spacing={2} sx={{ mb: 4 }}>
           <Grid size={{ xs: 12, sm: 4 }}>
             <Card><CardContent sx={{ textAlign: 'center' }}>
-              <Typography variant="h3" color="primary">{data?.semanal.pedidos || 0}</Typography>
+              <EventNoteIcon sx={{ fontSize: 40, color: '#6366F1', mb: 1 }} />
+              <Typography variant="h3" color="primary">{chartData?.semanal.pedidos || 0}</Typography>
               <Typography color="text.secondary">Pedidos esta semana</Typography>
             </CardContent></Card>
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
             <Card><CardContent sx={{ textAlign: 'center' }}>
-              <Typography variant="h3" color="secondary">{data?.semanal.usosEquipo || 0}</Typography>
+              <ScienceIcon sx={{ fontSize: 40, color: '#8B5CF6', mb: 1 }} />
+              <Typography variant="h3" color="secondary">{chartData?.semanal.usosEquipo || 0}</Typography>
               <Typography color="text.secondary">Usos de equipo esta semana</Typography>
             </CardContent></Card>
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
             <Card><CardContent sx={{ textAlign: 'center' }}>
-              <Typography variant="h3" color="warning.main">{data?.semanal.movimientos || 0}</Typography>
+              <InventoryIcon sx={{ fontSize: 40, color: '#F59E0B', mb: 1 }} />
+              <Typography variant="h3" color="warning.main">{chartData?.semanal.movimientos || 0}</Typography>
               <Typography color="text.secondary">Movimientos esta semana</Typography>
             </CardContent></Card>
           </Grid>
         </Grid>
 
-        {/* Resumen General */}
-        <Typography variant="h5" sx={{ mb: 2 }}>Resumen General</Typography>
         <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
-          <Chip label={`Total pedidos: ${data?.resumen.totalPedidos || 0}`} variant="outlined" />
-          {data?.resumen.pedidosPorEstado && Object.entries(data.resumen.pedidosPorEstado).map(([est, count]) => (
-            <Chip key={est} label={`${est}: ${count}`} color={estadoColors[est] || 'default'} />
+          <Chip label={`Total pedidos: ${totalPedidos}`} variant="outlined" />
+          {pedidosPorEstado.map(({ name, value }) => (
+            <Chip key={name} label={`${name}: ${value}`} sx={{ bgcolor: ESTADO_COLORS[name], color: '#fff' }} />
           ))}
         </Box>
 
         <Grid container spacing={3}>
-          {/* Laboratorios más usados */}
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography variant="h6" sx={{ mb: 2 }}>Laboratorios más usados</Typography>
-                <TableContainer component={Paper} variant="outlined">
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>#</TableCell>
-                        <TableCell>Laboratorio</TableCell>
-                        <TableCell align="right">Pedidos</TableCell>
-                        <TableCell align="right">Alumnos</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {data?.laboratoriosMasUsados.map((lab, i) => (
-                        <TableRow key={lab.nombre}>
-                          <TableCell>{i + 1}</TableCell>
-                          <TableCell>{lab.nombre}</TableCell>
-                          <TableCell align="right">{lab.count}</TableCell>
-                          <TableCell align="right">{lab.alumnos}</TableCell>
-                        </TableRow>
+                <Typography variant="h6" sx={{ color: '#1E293B', fontWeight: 600, mb: 2 }}>Pedidos por estado</Typography>
+                <ResponsiveContainer width="100%" height={barChartHeight}>
+                  <PieChart>
+                    <Pie data={pedidosPorEstado} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110} innerRadius={60} paddingAngle={3} labelLine={false} label={CustomPieLabel} isAnimationActive={true} animationDuration={1200}>
+                      {pedidosPorEstado.map((entry) => (
+                        <Cell key={entry.name} fill={ESTADO_COLORS[entry.name] || '#6B7280'} />
                       ))}
-                      {(!data?.laboratoriosMasUsados || data.laboratoriosMasUsados.length === 0) && (
-                        <TableRow><TableCell colSpan={4} align="center">Sin datos</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend iconType="circle" formatter={(value: string) => <span style={{ color: '#334155', fontSize: 13 }}>{value}</span>} />
+                  </PieChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </Grid>
 
-          {/* Equipos más usados */}
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography variant="h6" sx={{ mb: 2 }}>Equipos más usados</Typography>
-                <TableContainer component={Paper} variant="outlined">
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>#</TableCell>
-                        <TableCell>Equipo</TableCell>
-                        <TableCell align="right">Usos</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {data?.equiposMasUsados.map((eq, i) => (
-                        <TableRow key={eq.nombre}>
-                          <TableCell>{i + 1}</TableCell>
-                          <TableCell>{eq.nombre}</TableCell>
-                          <TableCell align="right">{eq.usos}</TableCell>
-                        </TableRow>
-                      ))}
-                      {(!data?.equiposMasUsados || data.equiposMasUsados.length === 0) && (
-                        <TableRow><TableCell colSpan={3} align="center">Sin datos</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                <Typography variant="h6" sx={{ color: '#1E293B', fontWeight: 600, mb: 2 }}>Laboratorios más usados</Typography>
+                <ResponsiveContainer width="100%" height={barChartHeight}>
+                  <BarChart data={chartData?.laboratoriosMasUsados ?? []} layout="vertical" margin={{ left: 80, right: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" allowDecimals={false} />
+                    <YAxis type="category" dataKey="nombre" width={100} tick={{ fontSize: 12 }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Gradients />
+                    <Bar dataKey="count" name="Pedidos" fill="url(#gradLab)" radius={[0, 4, 4, 0]} animationDuration={BAR_ANIMATION_DURATION} />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </Grid>
 
-          {/* Materiales más usados */}
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography variant="h6" sx={{ mb: 2 }}>Materiales más utilizados</Typography>
-                <TableContainer component={Paper} variant="outlined">
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>#</TableCell>
-                        <TableCell>Material</TableCell>
-                        <TableCell align="right">Cantidad utilizada</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {data?.materialesMasUsados.map((mat, i) => (
-                        <TableRow key={mat.nombre}>
-                          <TableCell>{i + 1}</TableCell>
-                          <TableCell>{mat.nombre}</TableCell>
-                          <TableCell align="right">{mat.cantidad}</TableCell>
-                        </TableRow>
-                      ))}
-                      {(!data?.materialesMasUsados || data.materialesMasUsados.length === 0) && (
-                        <TableRow><TableCell colSpan={3} align="center">Sin datos</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                <Typography variant="h6" sx={{ color: '#1E293B', fontWeight: 600, mb: 2 }}>Equipos más usados</Typography>
+                <ResponsiveContainer width="100%" height={barChartHeight}>
+                  <BarChart data={chartData?.equiposMasUsados ?? []}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="nombre" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={60} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Gradients />
+                    <Bar dataKey="usos" name="Usos" fill="url(#gradEquip)" radius={[4, 4, 0, 0]} animationDuration={BAR_ANIMATION_DURATION} />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </Grid>
 
-          {/* Sustancias básicas más consumidas */}
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography variant="h6" sx={{ mb: 2 }}>Sustancias Básicas más consumidas</Typography>
-                <TableContainer component={Paper} variant="outlined">
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>#</TableCell>
-                        <TableCell>Sustancia</TableCell>
-                        <TableCell align="right">Cantidad consumida</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {(data?.sustanciasMasUsadas ?? []).map((s, i) => (
-                        <TableRow key={s.nombre}>
-                          <TableCell>{i + 1}</TableCell>
-                          <TableCell>{s.nombre}</TableCell>
-                          <TableCell align="right">{s.cantidad}</TableCell>
-                        </TableRow>
-                      ))}
-                      {(!data?.sustanciasMasUsadas || data.sustanciasMasUsadas.length === 0) && (
-                        <TableRow><TableCell colSpan={3} align="center">Sin datos</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                <Typography variant="h6" sx={{ color: '#1E293B', fontWeight: 600, mb: 2 }}>Materiales más utilizados</Typography>
+                <ResponsiveContainer width="100%" height={barChartHeight}>
+                  <BarChart data={chartData?.materialesMasUsados ?? []} margin={{ right: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="nombre" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={60} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Gradients />
+                    <Bar dataKey="cantidad" name="Cantidad" fill="url(#gradMat)" radius={[4, 4, 0, 0]} animationDuration={BAR_ANIMATION_DURATION} />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </Grid>
 
-          {/* Reactivos más usados */}
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
-                <Typography variant="h6" sx={{ mb: 2 }}>Reactivos más consumidos</Typography>
-                <TableContainer component={Paper} variant="outlined">
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>#</TableCell>
-                        <TableCell>Reactivo</TableCell>
-                        <TableCell align="right">Cantidad consumida</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {data?.reactivosMasUsados.map((rea, i) => (
-                        <TableRow key={rea.nombre}>
-                          <TableCell>{i + 1}</TableCell>
-                          <TableCell>{rea.nombre}</TableCell>
-                          <TableCell align="right">{rea.cantidad}</TableCell>
-                        </TableRow>
-                      ))}
-                      {(!data?.reactivosMasUsados || data.reactivosMasUsados.length === 0) && (
-                        <TableRow><TableCell colSpan={3} align="center">Sin datos</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                <Typography variant="h6" sx={{ color: '#1E293B', fontWeight: 600, mb: 2 }}>Reactivos más consumidos</Typography>
+                <ResponsiveContainer width="100%" height={barChartHeight}>
+                  <BarChart data={chartData?.reactivosMasUsados ?? []} margin={{ right: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="nombre" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={60} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Gradients />
+                    <Bar dataKey="cantidad" name="Cantidad" fill="url(#gradReac)" radius={[4, 4, 0, 0]} animationDuration={BAR_ANIMATION_DURATION} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" sx={{ color: '#1E293B', fontWeight: 600, mb: 2 }}>Sustancias Básicas</Typography>
+                <ResponsiveContainer width="100%" height={barChartHeight}>
+                  <BarChart data={chartData?.sustanciasMasUsadas ?? []} layout="vertical" margin={{ left: 40, right: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" allowDecimals={false} />
+                    <YAxis type="category" dataKey="nombre" width={60} tick={{ fontSize: 9 }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Gradients />
+                    <Bar dataKey="cantidad" name="Cantidad" fill="url(#gradSust)" radius={[0, 4, 4, 0]} animationDuration={BAR_ANIMATION_DURATION} />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </Grid>
