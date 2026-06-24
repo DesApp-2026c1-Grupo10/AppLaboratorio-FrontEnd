@@ -25,44 +25,50 @@ export default function Login() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#6C72FA', display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2.5 }}>
-      <Box sx={{ bgcolor: '#FFFFFF', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', width: 450, maxWidth: '100%', p: '50px 60px' }}>
-        <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: '#333', display: 'flex', alignItems: 'center', gap: 1, mb: 5 }}>
-          <span>🔬</span> GestiónLab
-        </Typography>
-        
-        <Typography sx={{ fontSize: '2rem', color: '#1A1A1A', mb: 3.75 }}>Welcome Back</Typography>
-        
-        <Box component="form" onSubmit={handleLogin} sx={{ display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ mb: 2.5 }}>
-            <Typography sx={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#333', mb: 1 }}>Email Address</Typography>
-            <TextField
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email Address"
-              required
-              fullWidth
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' }, '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: '#6C72FA' } }}
-            />
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0B1739', display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2.5 }}>
+      <Box sx={{ bgcolor: '#FFFFFF', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.25)', display: 'flex', width: 1000, maxWidth: '100%', minHeight: 600, overflow: 'hidden' }}>
+        <Box sx={{ flex: 1, p: '50px 70px', display: 'flex', flexDirection: 'column' }}>
+          <Typography sx={{ fontWeight: 800, fontSize: '1.5rem', color: '#0B1739', display: 'flex', alignItems: 'center', gap: 1.5, mb: 6, letterSpacing: '-0.5px' }}>
+            <Box component="span" sx={{ fontSize: '1.8rem' }}>🔬</Box> GestiónLab
+          </Typography>
+
+          <Typography sx={{ fontSize: '2rem', color: '#1A1A1A', mb: 4, fontWeight: 700 }}>Bienvenido</Typography>
+
+          <Box component="form" onSubmit={handleLogin} sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ mb: 2.5 }}>
+              <Typography sx={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#333', mb: 1 }}>Correo electrónico</Typography>
+              <TextField
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Correo electrónico"
+                required
+                fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' }, '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: '#0B1739' } }}
+              />
+            </Box>
+
+            <Box sx={{ mb: 3 }}>
+              <Typography sx={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#333', mb: 1 }}>Contraseña</Typography>
+              <TextField
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Contraseña"
+                required
+                fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' }, '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: '#0B1739' } }}
+              />
+            </Box>
+
+            <Button type="submit" variant="contained" disabled={loading} fullWidth sx={{ bgcolor: '#0B1739', borderRadius: '8px', py: 1.75, fontSize: '1rem', fontWeight: 600, textTransform: 'none', '&:hover': { bgcolor: '#1E2A5A' } }}>
+              {loading ? 'Ingresando...' : 'Iniciar sesión'}
+            </Button>
           </Box>
-          
-          <Box sx={{ mb: 2.5 }}>
-            <Typography sx={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#333', mb: 1 }}>Password</Typography>
-            <TextField
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              required
-              fullWidth
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' }, '& .MuiOutlinedInput-root.Mui-focused fieldset': { borderColor: '#6C72FA' } }}
-            />
-          </Box>
-          
-          <Button type="submit" variant="contained" disabled={loading} fullWidth sx={{ bgcolor: '#6C72FA', borderRadius: '8px', py: 1.75, fontSize: '1rem', fontWeight: 600, textTransform: 'none', '&:hover': { bgcolor: '#555be0' } }}>
-            {loading ? 'Ingresando...' : 'Log In'}
-          </Button>
+        </Box>
+
+        <Box sx={{ flex: 1, bgcolor: '#F4F6FF', display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
+          <Box component="img" src="/imagen-login.png" alt="Laboratorio" sx={{ maxWidth: '100%', height: 'auto', maxHeight: 400 }} />
         </Box>
       </Box>
 
