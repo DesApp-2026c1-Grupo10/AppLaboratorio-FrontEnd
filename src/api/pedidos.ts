@@ -57,6 +57,16 @@ export async function rechazarPedido(id: number, usuarioId?: number): Promise<Pe
   return result.data;
 }
 
+export async function cancelarPedido(id: number, usuarioId: number): Promise<Pedido> {
+  const response = await authFetch(`${API_URL}/pedidos/${id}/cancelar`, {
+    method: 'PUT',
+    body: JSON.stringify({ usuarioId }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || 'Error cancelando pedido');
+  return result.data;
+}
+
 export async function finalizarPedido(id: number, data: {
   usuarioId: number;
   materiales?: { id: number; cantidad: number }[];

@@ -178,11 +178,19 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
       <Box>
         <Typography variant="subtitle1" sx={{ mb: 1 }}>Materiales</Typography>
         <Autocomplete
-          options={materiales.filter((m) => !selectedMaterials.find((sm) => sm.id === m.id))}
-          getOptionLabel={(o) => `${o.name} (Stock: ${o.stock} ${o.unit || ''})`}
+          options={materiales}
+          getOptionLabel={(o) => {
+            const sel = selectedMaterials.find((sm) => sm.id === o.id);
+            return sel ? `${o.name} (${sel.cantidad} en pedido)` : `${o.name} (Stock: ${o.stock} ${o.unit || ''})`;
+          }}
           onChange={(_, v) => {
             if (v) {
-              setSelectedMaterials([...selectedMaterials, { id: v.id, name: v.name, cantidad: 1, stock: v.stock }]);
+              const existing = selectedMaterials.find((sm) => sm.id === v.id);
+              if (existing) {
+                setSelectedMaterials(selectedMaterials.map((sm) => sm.id === v.id ? { ...sm, cantidad: sm.cantidad + 1 } : sm));
+              } else {
+                setSelectedMaterials([...selectedMaterials, { id: v.id, name: v.name, cantidad: 1, stock: v.stock }]);
+              }
             }
           }}
           renderInput={(params) => <TextField {...params} size="small" placeholder="Agregar material..." />}
@@ -202,11 +210,19 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
       <Box>
         <Typography variant="subtitle1" sx={{ mb: 1 }}>Reactivos</Typography>
         <Autocomplete
-          options={reactivos.filter((r) => !selectedReactivos.find((sr) => sr.id === r.id))}
-          getOptionLabel={(o) => `${o.name} (Stock: ${o.stock} ${o.unidadMedida || ''})`}
+          options={reactivos}
+          getOptionLabel={(o) => {
+            const sel = selectedReactivos.find((sr) => sr.id === o.id);
+            return sel ? `${o.name} (${sel.cantidad} en pedido)` : `${o.name} (Stock: ${o.stock} ${o.unidadMedida || ''})`;
+          }}
           onChange={(_, v) => {
             if (v) {
-              setSelectedReactivos([...selectedReactivos, { id: v.id, name: v.name, cantidad: 1, stock: v.stock, unidadMedida: v.unidadMedida }]);
+              const existing = selectedReactivos.find((sr) => sr.id === v.id);
+              if (existing) {
+                setSelectedReactivos(selectedReactivos.map((sr) => sr.id === v.id ? { ...sr, cantidad: sr.cantidad + 1 } : sr));
+              } else {
+                setSelectedReactivos([...selectedReactivos, { id: v.id, name: v.name, cantidad: 1, stock: v.stock, unidadMedida: v.unidadMedida }]);
+              }
             }
           }}
           renderInput={(params) => <TextField {...params} size="small" placeholder="Agregar reactivo..." />}
@@ -217,8 +233,8 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
               <Chip label={r.name} color={r.cantidad > r.stock ? 'error' : 'secondary'} size="small" />
               <TextField type="number" size="small" value={r.cantidad}
                 onChange={(e) => setSelectedReactivos(selectedReactivos.map((sr) => sr.id === r.id ? { ...sr, cantidad: Number(e.target.value) } : sr))}
-                slotProps={{ htmlInput: { min: 1, max: r.stock } }} sx={{ width: 100 }}
-                InputProps={{ endAdornment: <Typography variant="caption" color="text.secondary">{r.unidadMedida || 'u'}</Typography> }} />
+                slotProps={{ htmlInput: { min: 1, max: r.stock }, input: { endAdornment: <Typography variant="caption" color="text.secondary">{r.unidadMedida || 'u'}</Typography> } }} sx={{ width: 100 }}
+              />
               <Typography variant="caption" color="text.secondary">disp: {r.stock}</Typography>
               <IconButton size="small" onClick={() => setSelectedReactivos(selectedReactivos.filter((sr) => sr.id !== r.id))} color="error"><DeleteIcon fontSize="small" /></IconButton>
             </Box>

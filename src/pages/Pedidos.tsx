@@ -9,7 +9,7 @@ import FinalizarDialog from '../components/pedidos/FinalizarDialog';
 import ActividadesPredefinidasPanel from '../components/pedidos/ActividadesPredefinidasPanel';
 import RevisarPedidoDialog from '../components/pedidos/RevisarPedidoDialog';
 import RevisionPendienteDialog from '../components/pedidos/RevisionPendienteDialog';
-import { getPedidos, createPedido, aprobarPedido, rechazarPedido, finalizarPedido, crearRevision, getPedidosConRevisionPendiente } from '../api/pedidos';
+import { getPedidos, createPedido, aprobarPedido, rechazarPedido, cancelarPedido, finalizarPedido, crearRevision, getPedidosConRevisionPendiente } from '../api/pedidos';
 import { getLaboratorios } from '../api/laboratorios';
 import { getUsuarios } from '../api/usuarios';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -70,6 +70,7 @@ export default function Pedidos() {
       on('PEDIDO_APROBADO', () => { loadData(); }),
       on('PEDIDO_RECHAZADO', () => { loadData(); }),
       on('PEDIDO_FINALIZADO', () => { loadData(); }),
+      on('PEDIDO_CANCELADO', () => { loadData(); }),
       on('PEDIDO_MODIFICADO', () => { loadData(); }),
       on('REVISION_CREADA', () => { loadData(); }),
       on('REVISION_ACEPTADA', () => { loadData(); }),
@@ -140,6 +141,16 @@ export default function Pedidos() {
       setSnackbar({ msg: 'Pedido rechazado', severity: 'success' });
     } catch (error) {
       setSnackbar({ msg: error instanceof Error ? error.message : 'Error al rechazar pedido', severity: 'error' });
+    }
+  };
+
+  const handleCancelar = async (id: number) => {
+    try {
+      const pedidoActualizado = await cancelarPedido(id, usuarioLogueado.id);
+      setPedidos((prev) => prev.map((p) => p.id === id ? { ...p, ...pedidoActualizado } : p));
+      setSnackbar({ msg: 'Pedido cancelado', severity: 'info' });
+    } catch (error) {
+      setSnackbar({ msg: error instanceof Error ? error.message : 'Error al cancelar pedido', severity: 'error' });
     }
   };
 
@@ -364,6 +375,7 @@ export default function Pedidos() {
                     pedidos={activosVisibles}
                     aceptarPedido={aceptarPedido}
                     rechazarPedido={rechazar}
+                    cancelarPedido={handleCancelar}
                     finalizarPedido={handleFinalizarClick}
                     esAdmin={esAdmin}
                     onRevisar={esAdmin ? handleRevisar : undefined}
@@ -388,6 +400,7 @@ export default function Pedidos() {
                   pedidos={historial}
                   aceptarPedido={aceptarPedido}
                   rechazarPedido={rechazar}
+                  cancelarPedido={handleCancelar}
                   esAdmin={esAdmin}
                   onRevisar={esAdmin ? handleRevisar : undefined}
                   onVerRevision={handleVerRevision}

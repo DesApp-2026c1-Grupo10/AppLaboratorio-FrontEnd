@@ -23,6 +23,7 @@ interface Props {
   pedidos: Pedido[];
   aceptarPedido: (id: number) => void;
   rechazarPedido: (id: number) => void;
+  cancelarPedido?: (id: number) => void;
   finalizarPedido?: (pedido: Pedido) => void;
   esAdmin?: boolean;
   onRevisar?: (pedido: Pedido) => void;
@@ -35,7 +36,7 @@ interface Props {
   vista?: 'cards' | 'tabla';
 }
 
-export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, finalizarPedido, esAdmin, onRevisar, onVerRevision, pedidosConRevision, revisionesPorPedido, usuarioLogueadoId, revisionesRespuestaVistas, onMarcarRevisionVista, vista = 'cards' }: Props) {
+export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, cancelarPedido, finalizarPedido, esAdmin, onRevisar, onVerRevision, pedidosConRevision, revisionesPorPedido, usuarioLogueadoId, revisionesRespuestaVistas, onMarcarRevisionVista, vista = 'cards' }: Props) {
 
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [detallePedido, setDetallePedido] = useState<Pedido | null>(null);
@@ -90,6 +91,7 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
     APROBACION: 'Aprobación',
     RECHAZO: 'Rechazo',
     FINALIZACION: 'Finalización',
+    CANCELACION: 'Cancelación',
   };
 
   const tipoColor: Record<string, 'success' | 'info' | 'warning' | 'error' | 'default'> = {
@@ -98,6 +100,7 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
     APROBACION: 'success',
     RECHAZO: 'error',
     FINALIZACION: 'warning',
+    CANCELACION: 'default',
   };
 
   const esOwner = (pedido: Pedido) => pedido.usuarioId === usuarioLogueadoId;
@@ -124,8 +127,13 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
         <>
           {esAdmin && <Button onClick={() => aceptarPedido(pedido.id)} color="primary" size="small">Aceptar</Button>}
           {esAdmin && <Button onClick={() => rechazarPedido(pedido.id)} color="error" size="small">Rechazar</Button>}
-          {!esAdmin && <span style={{ color: '#888', fontStyle: 'italic' }}>Pendiente</span>}
+          {!esAdmin && !esOwner(pedido) && <span style={{ color: '#888', fontStyle: 'italic' }}>Pendiente</span>}
         </>
+      )}
+      {pedido.estado === 'Pendiente' && cancelarPedido && esOwner(pedido) && (
+        <Button onClick={() => cancelarPedido(pedido.id)} color="error" size="small" sx={{ minWidth: 0 }}>
+          Cancelar
+        </Button>
       )}
       {pedido.estado === 'Aprobado' && finalizarPedido && (
         <Button onClick={() => finalizarPedido(pedido)} color="warning" variant="contained" size="small">
@@ -235,8 +243,13 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, fi
                 <>
                   {esAdmin && <Button onClick={() => aceptarPedido(pedido.id)} color="primary" size="small">Aceptar</Button>}
                   {esAdmin && <Button onClick={() => rechazarPedido(pedido.id)} color="error" size="small">Rechazar</Button>}
-                  {!esAdmin && <span style={{ color: '#888', fontStyle: 'italic' }}>Pendiente</span>}
+                  {!esAdmin && !esOwner(pedido) && <span style={{ color: '#888', fontStyle: 'italic' }}>Pendiente</span>}
                 </>
+              )}
+              {pedido.estado === 'Pendiente' && cancelarPedido && esOwner(pedido) && (
+                <Button onClick={() => cancelarPedido(pedido.id)} color="error" size="small" sx={{ minWidth: 0 }}>
+                  Cancelar
+                </Button>
               )}
               {pedido.estado === 'Aprobado' && finalizarPedido && (
                 <Button onClick={() => finalizarPedido(pedido)} color="warning" variant="contained" size="small">
