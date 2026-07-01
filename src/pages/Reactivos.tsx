@@ -5,11 +5,13 @@ import {
   IconButton, Chip, Snackbar, Alert, TablePagination,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, BuildCircle as BuildCircleIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, BuildCircle as BuildCircleIcon, ShoppingCart as ShoppingCartIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import ReactivoDialog from '../components/reactivos/ReactivoDialog';
 import ProducirReactivoDialog from '../components/reactivos/ProducirReactivoDialog';
+import CompraDialog from '../components/compra/CompraDialog';
 import { getReactivos, createReactivo, updateReactivo, deleteReactivo } from '../api/reactivos';
+import { createMovimiento } from '../api/movimientos';
 import { getLaboratorios } from '../api/laboratorios';
 import { useWs } from '../context/WsContext';
 import type { SnackbarState } from '../types/snackbar';
@@ -139,6 +141,22 @@ export default function Reactivos() {
 
   const proxVencer = (v: string) => v && new Date(v) <= new Date(Date.now() + 30 * 86400000);
 
+  const [comprarReactivo, setComprarReactivo] = useState<Reactivo | null>(null);
+
+  const handleComprarReactivo = async (cantidad: number) => {
+    if (!comprarReactivo) return;
+    const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+    await createMovimiento({
+      tipoMovimiento: 'compra',
+      cantidad,
+      reactivoId: comprarReactivo.id,
+      usuarioId: usuario.id,
+      observacion: 'Compra registrada desde inventario',
+    });
+    setSnackbar({ msg: `Compra registrada: +${cantidad} ${comprarReactivo.name}`, severity: 'success' });
+    loadData();
+  };
+
   return (
     <AppLayout>
       <Box className="inventario-page">
@@ -161,8 +179,10 @@ export default function Reactivos() {
                   <TableSortLabel active={sortBy === 'name'} direction={sortBy === 'name' ? sortOrder : 'asc'} onClick={() => handleSort('name')}>Nombre</TableSortLabel>
                 </TableCell>
                 <TableCell sortDirection={sortBy === 'stock' ? sortOrder : false}>
-                  <TableSortLabel active={sortBy === 'stock'} direction={sortBy === 'stock' ? sortOrder : 'asc'} onClick={() => handleSort('stock')}>Stock</TableSortLabel>
+                  <TableSortLabel active={sortBy === 'stock'} direction={sortBy === 'stock' ? sortOrder : 'asc'} onClick={() => handleSort('stock')}>Stock Físico</TableSortLabel>
                 </TableCell>
+                <TableCell>Stock Comp.</TableCell>
+                <TableCell>Disponible</TableCell>
                 <TableCell sortDirection={sortBy === 'unidadMedida' ? sortOrder : false}>
                   <TableSortLabel active={sortBy === 'unidadMedida'} direction={sortBy === 'unidadMedida' ? sortOrder : 'asc'} onClick={() => handleSort('unidadMedida')}>Unidad</TableSortLabel>
                 </TableCell>
@@ -180,14 +200,16 @@ export default function Reactivos() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? <TableSkeleton columns={8} rows={5} />
-              : reactivos.length === 0 ? <TableRow><TableCell colSpan={8} align="center">No hay reactivos</TableCell></TableRow>
+              {loading ? <TableSkeleton columns={10} rows={5} />
+              : reactivos.length === 0 ? <TableRow><TableCell colSpan={10} align="center">No hay reactivos</TableCell></TableRow>
               : sortedReactivos.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell>{r.name}</TableCell>
                   <TableCell>
                     <Chip label={r.stock} color={r.stockMinimo > 0 && r.stock <= r.stockMinimo ? 'warning' : r.stock <= 0 ? 'error' : 'default'} size="small" />
                   </TableCell>
+                  <TableCell>{r.stockComprometido || 0}</TableCell>
+                  <TableCell>{(r.stock || 0) - (r.stockComprometido || 0)}</TableCell>
                   <TableCell>{r.unidadMedida || '-'}</TableCell>
                   <TableCell>
                     {r.vencimiento ? (
@@ -209,6 +231,7 @@ export default function Reactivos() {
                     {r.composicion && r.composicion.length > 0 && (
                       <IconButton size="small" onClick={() => setProducirReactivo(r)} title="Producir reactivo" color="primary"><BuildCircleIcon fontSize="small" /></IconButton>
                     )}
+                    <IconButton size="small" onClick={() => setComprarReactivo(r)} title="Comprar" color="success"><ShoppingCartIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => navigate(`/movimientos?reactivoId=${r.id}`)} title="Ver movimientos">
                       <HistoryIcon fontSize="small" />
                     </IconButton>
@@ -253,6 +276,8 @@ export default function Reactivos() {
           onClose={() => setProducirReactivo(null)}
         />
       )}
+
+      <CompraDialog open={comprarReactivo !== null} itemName={comprarReactivo?.name || ''} onConfirm={handleComprarReactivo} onClose={() => setComprarReactivo(null)} />
 
       <Dialog open={deleteDialog !== null} onClose={() => setDeleteDialog(null)}>
         <DialogTitle>¿Eliminar reactivo?</DialogTitle>

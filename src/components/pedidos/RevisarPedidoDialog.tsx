@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
-  Typography, Box, FormControl, InputLabel, Select, MenuItem, Chip, Autocomplete,
+  Dialog, DialogContent, DialogActions, Button, TextField,
+  Typography, Box, FormControl, InputLabel, Select, MenuItem, Chip, Autocomplete, IconButton, alpha,
 } from '@mui/material';
+import { Close as CloseIcon, ArrowForward } from '@mui/icons-material';
 import { getLaboratorios } from '../../api/laboratorios';
 import { getMateriales } from '../../api/materiales';
 import { getReactivos } from '../../api/reactivos';
 import { getEquipos } from '../../api/equipos';
+import { getRevisiones } from '../../api/pedidos';
 import type { Pedido } from '../../types/pedido';
+import type { PedidoRevision } from '../../types/pedidoRevision';
 import type { Laboratorio } from '../../types/laboratorio';
 
 interface ItemSel {
@@ -30,6 +33,15 @@ export default function RevisarPedidoDialog({ open, pedido, onSubmit, onClose }:
   const [reactivos, setReactivos] = useState<any[]>([]);
   const [equipos, setEquipos] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [revisiones, setRevisiones] = useState<PedidoRevision[]>([]);
+
+  useEffect(() => {
+    if (open && pedido) {
+      getRevisiones(pedido.id).then(setRevisiones).catch(console.error);
+    } else {
+      setRevisiones([]);
+    }
+  }, [open, pedido]);
 
   const [fecha, setFecha] = useState('');
   const [horaInicio, setHoraInicio] = useState('');
@@ -124,12 +136,35 @@ export default function RevisarPedidoDialog({ open, pedido, onSubmit, onClose }:
   const tieneCambios = comentario.trim().length > 0 || Object.keys(construirCambios()).length > 0;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Revisar Pedido #{pedido.id}</DialogTitle>
-      <DialogContent dividers>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
+      slotProps={{
+        paper: {
+          sx: { borderRadius: 4, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' },
+        },
+      }}
+    >
+      <Box sx={{
+        background: 'linear-gradient(135deg, #0B1739 0%, #1a237e 50%, #283593 100%)',
+        px: 3, py: 2.5,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', letterSpacing: -0.5 }}>
+            Revisar Pedido #{pedido.id}
+          </Typography>
+          <Typography variant="caption" sx={{ color: alpha('#fff', 0.7), fontWeight: 500 }}>
+            Proponé cambios al pedido
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: alpha('#fff', 0.7), '&:hover': { bgcolor: alpha('#fff', 0.1), color: '#fff' } }}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+
+      <DialogContent sx={{ px: 3, py: 3, bgcolor: '#f8fafc' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Proponé cambios al pedido. El creador recibirá la revisión y podrá aceptarla o rechazarla.
+            El creador recibirá la revisión y podrá aceptarla o rechazarla.
           </Typography>
 
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -227,10 +262,44 @@ export default function RevisarPedidoDialog({ open, pedido, onSubmit, onClose }:
             placeholder="Explicá qué cambios proponés y por qué..."
           />
         </Box>
+
+        {revisiones.length > 0 && (
+          <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 1.5, mt: 1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mb: 1, display: 'block' }}>Mensajes</Typography>
+            {revisiones.map((rev) => (
+              <Box key={rev.id} sx={{
+                display: 'flex', mb: 1,
+                justifyContent: rev.Usuario?.id === pedido?.usuarioId ? 'flex-start' : 'flex-end',
+              }}>
+                <Box sx={{
+                  maxWidth: '80%', p: 1.5, borderRadius: 2,
+                  bgcolor: rev.Usuario?.id === pedido?.usuarioId ? alpha('#6366F1', 0.08) : '#e8f5e9',
+                  border: '1px solid',
+                  borderColor: rev.Usuario?.id === pedido?.usuarioId ? alpha('#6366F1', 0.2) : '#c8e6c9',
+                }}>
+                  <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.3 }}>
+                    {rev.Usuario?.nombre || 'Usuario'} {rev.Usuario?.apellido || ''}
+                    {rev.estado === 'aceptada' ? ' ✓' : rev.estado === 'rechazada' ? ' ✗' : ''}
+                  </Typography>
+                  {rev.comentario && (
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{rev.comentario}</Typography>
+                  )}
+                  <Typography variant="caption" color="text.disabled" sx={{ mt: 0.3, display: 'block' }}>
+                    {new Date(rev.createdAt).toLocaleString()}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={!tieneCambios || submitting}>
+      <DialogActions sx={{ px: 3, py: 2, bgcolor: '#f8fafc', borderTop: '1px solid', borderColor: 'divider' }}>
+        <Button onClick={onClose} variant="outlined" sx={{ borderRadius: 2.5, px: 3, textTransform: 'none', fontWeight: 600 }}>
+          Cancelar
+        </Button>
+        <Button variant="contained" onClick={handleSubmit} disabled={!tieneCambios || submitting}
+          endIcon={<ArrowForward />}
+          sx={{ borderRadius: 2.5, px: 3, textTransform: 'none', fontWeight: 600, bgcolor: '#0B1739', '&:hover': { bgcolor: '#1a237e' } }}>
           {submitting ? 'Enviando...' : 'Enviar Revisión'}
         </Button>
       </DialogActions>

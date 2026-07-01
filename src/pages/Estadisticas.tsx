@@ -21,8 +21,6 @@ const ESTADO_COLORS: Record<string, string> = {
   Cancelado: '#6B7280',
 };
 
-const CHART_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'];
-
 const BAR_ANIMATION_DURATION = 1200;
 
 const Gradients = () => (
@@ -77,12 +75,44 @@ export default function Estadisticas() {
     </text>
   );
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const tooltipSx = { bgcolor: '#1E293B', color: '#fff', px: 1.5, py: 1, borderRadius: 1, fontSize: 13, maxWidth: 260 };
+
+  const PedidosTooltip = ({ active, payload }: any) => {
+    if (!active || !payload?.length) return null;
+    const total = pedidosPorEstado.reduce((s: number, p: any) => s + p.value, 0);
+    const pct = total > 0 ? ((payload[0].value / total) * 100).toFixed(1) : '0';
+    return (
+      <Box sx={tooltipSx}>
+        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>{payload[0].name}</Typography>
+        <Typography variant="body2">{payload[0].value} pedidos ({pct}%)</Typography>
+      </Box>
+    );
+  };
+
+  const BarTooltip = ({ active, payload, label, suffix = '' }: any) => {
     if (!active || !payload?.length) return null;
     return (
-      <Box sx={{ bgcolor: '#1E293B', color: '#fff', px: 1.5, py: 1, borderRadius: 1, fontSize: 13 }}>
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>{payload[0].name}</Typography>
-        <Typography variant="body2">{payload[0].value} pedidos</Typography>
+      <Box sx={tooltipSx}>
+        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.3 }}>{label || payload[0].payload?.nombre || payload[0].name}</Typography>
+        {payload.map((entry: any, i: number) => (
+          <Typography key={i} variant="body2">
+            {entry.name}: {entry.value} {suffix}
+          </Typography>
+        ))}
+      </Box>
+    );
+  };
+
+  const EquiposTooltip = (props: any) => <BarTooltip {...props} suffix="usos" />;
+  const MaterialesTooltip = (props: any) => <BarTooltip {...props} suffix="unidades" />;
+  const ReactivosTooltip = (props: any) => <BarTooltip {...props} suffix="ml/gr" />;
+  const SustanciasTooltip = (props: any) => <BarTooltip {...props} suffix="unidades" />;
+  const DescarteTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <Box sx={tooltipSx}>
+        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.3 }}>{label || payload[0]?.payload?.nombre}</Typography>
+        <Typography variant="body2">Cantidad descartada: {payload[0]?.value}</Typography>
       </Box>
     );
   };
@@ -119,6 +149,7 @@ export default function Estadisticas() {
 
         <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
           <Chip label={`Total pedidos: ${totalPedidos}`} variant="outlined" />
+          {chartData?.totalDescarte ? <Chip label={`Descarte total: ${chartData.totalDescarte}`} color="error" variant="outlined" /> : null}
           {pedidosPorEstado.map(({ name, value }) => (
             <Chip key={name} label={`${name}: ${value}`} sx={{ bgcolor: ESTADO_COLORS[name], color: '#fff' }} />
           ))}
@@ -136,7 +167,7 @@ export default function Estadisticas() {
                         <Cell key={entry.name} fill={ESTADO_COLORS[entry.name] || '#6B7280'} />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<PedidosTooltip />} />
                     <Legend iconType="circle" formatter={(value: string) => <span style={{ color: '#334155', fontSize: 13 }}>{value}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -153,7 +184,7 @@ export default function Estadisticas() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" allowDecimals={false} />
                     <YAxis type="category" dataKey="nombre" width={100} tick={{ fontSize: 12 }} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<BarTooltip />} />
                     <Gradients />
                     <Bar dataKey="count" name="Pedidos" fill="url(#gradLab)" radius={[0, 4, 4, 0]} animationDuration={BAR_ANIMATION_DURATION} />
                   </BarChart>
@@ -171,7 +202,7 @@ export default function Estadisticas() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="nombre" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={60} />
                     <YAxis allowDecimals={false} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<EquiposTooltip />} />
                     <Gradients />
                     <Bar dataKey="usos" name="Usos" fill="url(#gradEquip)" radius={[4, 4, 0, 0]} animationDuration={BAR_ANIMATION_DURATION} />
                   </BarChart>
@@ -189,7 +220,7 @@ export default function Estadisticas() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="nombre" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={60} />
                     <YAxis allowDecimals={false} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<MaterialesTooltip />} />
                     <Gradients />
                     <Bar dataKey="cantidad" name="Cantidad" fill="url(#gradMat)" radius={[4, 4, 0, 0]} animationDuration={BAR_ANIMATION_DURATION} />
                   </BarChart>
@@ -207,7 +238,7 @@ export default function Estadisticas() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="nombre" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={60} />
                     <YAxis allowDecimals={false} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<ReactivosTooltip />} />
                     <Gradients />
                     <Bar dataKey="cantidad" name="Cantidad" fill="url(#gradReac)" radius={[4, 4, 0, 0]} animationDuration={BAR_ANIMATION_DURATION} />
                   </BarChart>
@@ -216,6 +247,42 @@ export default function Estadisticas() {
             </Card>
           </Grid>
 
+          {chartData && chartData.materialesDescartados && chartData.materialesDescartados.length > 0 && (
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" sx={{ color: '#1E293B', fontWeight: 600, mb: 2 }}>Materiales Descartados</Typography>
+                  <ResponsiveContainer width="100%" height={barChartHeight}>
+                    <BarChart data={chartData.materialesDescartados} margin={{ right: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="nombre" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={60} />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip content={<DescarteTooltip />} />
+                      <Bar dataKey="cantidad" name="Cantidad" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+          {chartData && chartData.reactivosDescartados && chartData.reactivosDescartados.length > 0 && (
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" sx={{ color: '#1E293B', fontWeight: 600, mb: 2 }}>Reactivos Descartados</Typography>
+                  <ResponsiveContainer width="100%" height={barChartHeight}>
+                    <BarChart data={chartData.reactivosDescartados} margin={{ right: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="nombre" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={60} />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip content={<DescarteTooltip />} />
+                      <Bar dataKey="cantidad" name="Cantidad" fill="#F97316" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
           <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
@@ -225,7 +292,7 @@ export default function Estadisticas() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" allowDecimals={false} />
                     <YAxis type="category" dataKey="nombre" width={60} tick={{ fontSize: 9 }} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<SustanciasTooltip />} />
                     <Gradients />
                     <Bar dataKey="cantidad" name="Cantidad" fill="url(#gradSust)" radius={[0, 4, 4, 0]} animationDuration={BAR_ANIMATION_DURATION} />
                   </BarChart>

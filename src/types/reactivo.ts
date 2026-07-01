@@ -10,6 +10,7 @@ export interface Reactivo {
   name: string;
   descripcion?: string;
   stock: number;
+  stockComprometido?: number;
   stockMinimo: number;
   unidadMedida?: string;
   vencimiento?: string;

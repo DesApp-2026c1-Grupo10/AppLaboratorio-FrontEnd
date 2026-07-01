@@ -18,6 +18,8 @@ import InventoryIcon from "@mui/icons-material/Inventory";
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import BiotechIcon from "@mui/icons-material/Biotech";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import PeopleIcon from "@mui/icons-material/People";
 
 import {
   useNavigate,
@@ -25,13 +27,15 @@ import {
 } from "react-router-dom";
 
 const menuItems = [
-  { text: "Dashboard", path: "/", icon: <DashboardIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
-  { text: "Laboratorios", path: "/laboratorios", icon: <ScienceIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
-  { text: "Pedidos", path: "/pedidos", icon: <EventNoteIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
-  { text: "Agenda", path: "/agenda", icon: <EventNoteIcon />, roles: ['Alumno', 'Profesor', 'Desarrollador'] },
+  { text: "Dashboard", path: "/", icon: <DashboardIcon />, roles: ['Profesor', 'Desarrollador'] },
+  { text: "Laboratorios", path: "/laboratorios", icon: <ScienceIcon />, roles: ['Profesor', 'Desarrollador'] },
+  { text: "Pedidos", path: "/pedidos", icon: <EventNoteIcon />, roles: ['Profesor', 'Desarrollador'] },
+  { text: "Agenda", path: "/agenda", icon: <EventNoteIcon />, roles: ['Profesor', 'Desarrollador'] },
   { text: "Inventario", path: "/inventario", icon: <InventoryIcon />, roles: ['Desarrollador'] },
   { text: "Sustancias Básicas", path: "/sustancias-basicas", icon: <BiotechIcon />, roles: ['Desarrollador'] },
+  { text: "Carritos", path: "/carritos", icon: <LocalShippingIcon />, roles: ['Desarrollador'] },
   { text: "Estadísticas", path: "/estadisticas", icon: <BarChartIcon />, roles: ['Desarrollador'] },
+  { text: "Usuarios", path: "/usuarios", icon: <PeopleIcon />, roles: ['Desarrollador'] },
 ];
 
 interface Props {

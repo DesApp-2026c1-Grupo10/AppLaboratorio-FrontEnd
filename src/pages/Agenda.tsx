@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Box, Typography, Card, CardContent, Chip, Grid, FormControl, InputLabel, Select, MenuItem, IconButton, ToggleButtonGroup, ToggleButton, Dialog, DialogTitle, DialogContent,
+  Box, Typography, Card, CardContent, Chip, FormControl, InputLabel, Select, MenuItem, IconButton, Dialog, DialogTitle, DialogContent,
 } from '@mui/material';
-import { ChevronLeft, ChevronRight, ViewWeek, CalendarMonth, Close as CloseIcon } from '@mui/icons-material';
+import { ChevronLeft, ChevronRight, Close as CloseIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import { getPedidos } from '../api/pedidos';
 import { getUsuarios } from '../api/usuarios';
@@ -22,18 +22,6 @@ function localDateStr(d: Date) {
 function formatDateDisplay(dateStr: string) {
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function getWeekDays(refDate: Date) {
-  const diaSemana = refDate.getDay();
-  const diff = diaSemana === 0 ? -6 : 1 - diaSemana;
-  const lunes = new Date(refDate);
-  lunes.setDate(refDate.getDate() + diff);
-  return DIAS.map((_, i) => {
-    const d = new Date(lunes);
-    d.setDate(lunes.getDate() + i);
-    return localDateStr(d);
-  });
 }
 
 function getMonthWeeks(refDate: Date) {
@@ -74,21 +62,13 @@ interface AgendaPedido {
   estado: string;
 }
 
-type Vista = 'semana' | 'mes';
-
 export default function Agenda() {
   const [pedidos, setPedidos] = useState<AgendaPedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [filtroUsuario, setFiltroUsuario] = useState<number | 'todos'>('todos');
-  const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
-  const [vista, setVista] = useState<Vista>('semana');
   const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(null);
-
-  const refDate = new Date();
-  refDate.setDate(refDate.getDate() + weekOffset * 7);
-  const weekDays = getWeekDays(refDate);
 
   const monthRefDate = new Date();
   monthRefDate.setMonth(monthRefDate.getMonth() + monthOffset);
@@ -138,23 +118,6 @@ export default function Agenda() {
 
   const hoy = localDateStr(new Date());
 
-  const handlePrev = () => {
-    if (vista === 'semana') setWeekOffset(wo => wo - 1);
-    else setMonthOffset(mo => mo - 1);
-  };
-
-  const handleNext = () => {
-    if (vista === 'semana') setWeekOffset(wo => wo + 1);
-    else setMonthOffset(mo => mo + 1);
-  };
-
-  const handleToday = () => {
-    setWeekOffset(0);
-    setMonthOffset(0);
-  };
-
-  const showTodayButton = vista === 'semana' ? weekOffset !== 0 : monthOffset !== 0;
-
   return (
     <AppLayout>
       <Box sx={{ p: 0 }}>
@@ -163,29 +126,18 @@ export default function Agenda() {
             Agenda de Laboratorios
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <ToggleButtonGroup value={vista} exclusive onChange={(_, v) => v && setVista(v)} size="small">
-              <ToggleButton value="semana" sx={{ px: 1.5, py: 0.3, fontSize: 12, fontWeight: 600 }}>
-                <ViewWeek sx={{ fontSize: 16, mr: 0.5 }} /> Semana
-              </ToggleButton>
-              <ToggleButton value="mes" sx={{ px: 1.5, py: 0.3, fontSize: 12, fontWeight: 600 }}>
-                <CalendarMonth sx={{ fontSize: 16, mr: 0.5 }} /> Mes
-              </ToggleButton>
-            </ToggleButtonGroup>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <IconButton size="small" onClick={handlePrev} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+              <IconButton size="small" onClick={() => setMonthOffset(mo => mo - 1)} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
                 <ChevronLeft fontSize="small" />
               </IconButton>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary', minWidth: vista === 'mes' ? 140 : 160, textAlign: 'center' }}>
-                {vista === 'semana'
-                  ? `${formatDateDisplay(weekDays[0])} — ${formatDateDisplay(weekDays[6])}`
-                  : formatMonthYear(monthRefDate)
-                }
+              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary', minWidth: 160, textAlign: 'center' }}>
+                {formatMonthYear(monthRefDate)}
               </Typography>
-              <IconButton size="small" onClick={handleNext} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+              <IconButton size="small" onClick={() => setMonthOffset(mo => mo + 1)} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
                 <ChevronRight fontSize="small" />
               </IconButton>
-              {showTodayButton && (
-                <IconButton size="small" onClick={handleToday} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, ml: 0.5 }}>
+              {monthOffset !== 0 && (
+                <IconButton size="small" onClick={() => setMonthOffset(0)} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, ml: 0.5 }}>
                   <Typography variant="caption" sx={{ fontWeight: 700, px: 0.5 }}>Hoy</Typography>
                 </IconButton>
               )}
@@ -194,10 +146,7 @@ export default function Agenda() {
         </Box>
 
         <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-          Clases aprobadas y finalizadas — {vista === 'semana'
-            ? `Semana del ${formatDateDisplay(weekDays[0])} al ${formatDateDisplay(weekDays[6])}`
-            : formatMonthYear(monthRefDate)
-          }
+          Clases aprobadas y finalizadas — {formatMonthYear(monthRefDate)}
         </Typography>
 
         {esAdmin && (
@@ -220,47 +169,12 @@ export default function Agenda() {
 
         {loading ? (
           <Typography>Cargando...</Typography>
-        ) : vista === 'semana' ? (
-          <Grid container spacing={1.5}>
-            {weekDays.map((fecha, i) => {
-              const pedidosDelDia = pedidosFiltrados.filter((p) => p.fecha === fecha).sort((a, b) => a.horario.localeCompare(b.horario));
-              const esHoy = fecha === hoy;
-              return (
-                <Grid key={fecha} size={{ xs: 12, sm: 6, md: 12 / 7 }}>
-                  <Card sx={{ minHeight: 200, border: esHoy ? '2px solid #1976d2' : '1px solid #e0e0e0', bgcolor: esHoy ? '#f0f7ff' : 'white' }}>
-                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                        {DIAS[i]}
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
-                          {formatDateDisplay(fecha)}
-                        </Typography>
-                      </Typography>
-                      {pedidosDelDia.length === 0 ? (
-                        <Typography variant="caption" color="text.disabled">Sin clases</Typography>
-                      ) : (
-                        pedidosDelDia.map((p) => (
-                          <Box key={p.id} sx={{ bgcolor: p.estado === 'Finalizado' ? '#f5f5f5' : '#e3f2fd', borderRadius: 1, p: 0.8, mb: 0.8, borderLeft: p.estado === 'Finalizado' ? '3px solid #9e9e9e' : '3px solid #1976d2', opacity: p.estado === 'Finalizado' ? 0.75 : 1 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>{p.horario}</Typography>
-                            <Typography variant="caption" sx={{ display: 'block' }}>{p.laboratorioNombre}</Typography>
-                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.3 }}>
-                              <Chip label={`${p.alumnos} alumnos`} size="small" sx={{ height: 18, fontSize: 10 }} />
-                              {esAdmin && <Chip label={p.docente} size="small" variant="outlined" sx={{ height: 18, fontSize: 10 }} />}
-                            </Box>
-                          </Box>
-                        ))
-                      )}
-                    </CardContent>
-                  </Card>
-                </Grid>
-              );
-            })}
-          </Grid>
         ) : (
           <Box>
             <Box sx={{ display: 'flex', mb: 0.5 }}>
               {DIAS.map((d) => (
-                <Box key={d} sx={{ flex: 1, textAlign: 'center', py: 0.5 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>{d}</Typography>
+                <Box key={d} sx={{ flex: 1, textAlign: 'center', py: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.secondary' }}>{d}</Typography>
                 </Box>
               ))}
             </Box>
@@ -271,13 +185,22 @@ export default function Agenda() {
                   const esHoy = fecha === hoy;
                   const dayNum = new Date(fecha + 'T00:00:00').getDate();
                   const esMesActual = new Date(fecha + 'T00:00:00').getMonth() === currentMonth;
+                  const tieneClases = pedidosDelDia.length > 0;
                   return (
-                    <Box key={fecha} onClick={() => pedidosDelDia.length > 0 && setDiaSeleccionado(fecha)} sx={{ flex: 1, minHeight: 100, border: esHoy ? '2px solid #1976d2' : '1px solid #e0e0e0', borderRadius: 1.5, bgcolor: esHoy ? '#f0f7ff' : esMesActual ? 'white' : '#f5f5f5', opacity: esMesActual ? 1 : 0.5, p: 0.5, overflow: 'hidden', cursor: pedidosDelDia.length > 0 ? 'pointer' : 'default', transition: 'box-shadow 0.15s', '&:hover': pedidosDelDia.length > 0 ? { boxShadow: '0 2px 8px rgba(0,0,0,0.12)' } : {} }}>
-                      <Typography variant="caption" sx={{ fontWeight: esHoy ? 800 : 600, color: esHoy ? 'primary.main' : 'text.secondary', display: 'block', mb: 0.3 }}>
+                    <Box key={fecha} onClick={() => tieneClases && setDiaSeleccionado(fecha)}
+                      sx={{
+                        flex: 1, minHeight: 120, border: esHoy ? '2px solid #1976d2' : '1px solid #e0e0e0',
+                        borderRadius: 2, bgcolor: esHoy ? '#f0f7ff' : esMesActual ? (tieneClases ? '#FFF3E0' : 'white') : '#f5f5f5',
+                        opacity: esMesActual ? 1 : 0.5, p: 1, overflow: 'hidden',
+                        cursor: tieneClases ? 'pointer' : 'default',
+                        transition: 'box-shadow 0.15s',
+                        '&:hover': tieneClases ? { boxShadow: '0 2px 8px rgba(0,0,0,0.12)' } : {},
+                      }}>
+                      <Typography variant="body2" sx={{ fontWeight: esHoy ? 800 : 600, color: esHoy ? 'primary.main' : 'text.secondary', display: 'block', mb: 0.5 }}>
                         {dayNum}
                       </Typography>
                       {pedidosDelDia.map((p) => (
-                        <Box key={p.id} sx={{ bgcolor: p.estado === 'Finalizado' ? '#e0e0e0' : '#e3f2fd', borderRadius: 0.8, px: 0.4, py: 0.2, mb: 0.2, fontSize: 9, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <Box key={p.id} sx={{ bgcolor: p.estado === 'Finalizado' ? '#e0e0e0' : '#FFCC80', borderRadius: 1, px: 0.5, py: 0.3, mb: 0.3, fontSize: 10, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           <Box component="span" sx={{ fontWeight: 600 }}>{p.horario}</Box>
                           <Box component="span" sx={{ ml: 0.3 }}>{p.laboratorioNombre}</Box>
                         </Box>

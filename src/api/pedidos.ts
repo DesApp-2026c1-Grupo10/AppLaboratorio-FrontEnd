@@ -17,6 +17,16 @@ export async function getPedido(id: number): Promise<Pedido> {
   return result.data;
 }
 
+export async function checkPedido(pedido: Record<string, any>): Promise<{ errors: string[]; warnings: string[] }> {
+  const response = await authFetch(`${API_URL}/pedidos/check`, {
+    method: 'POST',
+    body: JSON.stringify(pedido),
+  });
+  const result = await response.json();
+  if (!response.ok) return { errors: [result.message || 'Error verificando pedido'], warnings: [] };
+  return { errors: result.errors || [], warnings: result.warnings || [] };
+}
+
 export async function createPedido(pedido: Record<string, any>): Promise<Pedido> {
   const response = await authFetch(`${API_URL}/pedidos`, {
     method: 'POST',
@@ -47,6 +57,16 @@ export async function aprobarPedido(id: number, usuarioId?: number): Promise<Ped
   return result.data;
 }
 
+export async function deshacerAprobacionPedido(id: number, usuarioId?: number): Promise<Pedido> {
+  const response = await authFetch(`${API_URL}/pedidos/${id}/deshacer-aprobacion`, {
+    method: 'PUT',
+    body: usuarioId ? JSON.stringify({ usuarioId }) : undefined,
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || 'Error deshaciendo aprobación');
+  return result.data;
+}
+
 export async function rechazarPedido(id: number, usuarioId?: number): Promise<Pedido> {
   const response = await authFetch(`${API_URL}/pedidos/${id}/rechazar`, {
     method: 'PUT',
@@ -69,8 +89,8 @@ export async function cancelarPedido(id: number, usuarioId: number): Promise<Ped
 
 export async function finalizarPedido(id: number, data: {
   usuarioId: number;
-  materiales?: { id: number; cantidad: number }[];
-  reactivos?: { id: number; cantidad: number }[];
+  materiales?: { id: number; cantidad: number; descartado?: boolean }[];
+  reactivos?: { id: number; cantidad: number; descartado?: boolean }[];
   equipos?: { id: number; estado: string }[];
 }): Promise<Pedido> {
   const response = await authFetch(`${API_URL}/pedidos/${id}/finalizar`, {

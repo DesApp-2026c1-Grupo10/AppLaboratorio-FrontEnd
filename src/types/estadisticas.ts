@@ -34,6 +34,9 @@ export interface EstadisticasData {
   materialesMasUsados: MaterialStats[];
   reactivosMasUsados: ReactivoStats[];
   sustanciasMasUsadas: SustanciaStats[];
+  materialesDescartados?: MaterialStats[];
+  reactivosDescartados?: ReactivoStats[];
+  totalDescarte?: number;
   semanal: {
     pedidos: number;
     usosEquipo: number;

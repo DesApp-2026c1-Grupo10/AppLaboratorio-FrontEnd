@@ -7,10 +7,12 @@ import {
 import type { SnackbarState } from '../types/snackbar';
 import TableSkeleton from '../components/TableSkeleton';
 import { useNavigate } from 'react-router-dom';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, ShoppingCart as ShoppingCartIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
 import MaterialDialog from '../components/materiales/MaterialDialog';
+import CompraDialog from '../components/compra/CompraDialog';
 import { getMateriales, createMaterial, updateMaterial, deleteMaterial } from '../api/materiales';
+import { createMovimiento } from '../api/movimientos';
 import { getLaboratorios } from '../api/laboratorios';
 import { useWs } from '../context/WsContext';
 import type { Material } from '../types/material';
@@ -53,6 +55,7 @@ export default function Materiales() {
       case 'name': aVal = a.name?.toLowerCase(); bVal = b.name?.toLowerCase(); break;
       case 'descripcion': aVal = a.descripcion?.toLowerCase(); bVal = b.descripcion?.toLowerCase(); break;
       case 'stock': aVal = a.stock; bVal = b.stock; break;
+      case 'stockComprometido': aVal = a.stockComprometido || 0; bVal = b.stockComprometido || 0; break;
       case 'stockMinimo': aVal = a.stockMinimo; bVal = b.stockMinimo; break;
       case 'unit': aVal = a.unit?.toLowerCase(); bVal = b.unit?.toLowerCase(); break;
       case 'laboratorio': aVal = a.laboratorio?.nombre?.toLowerCase(); bVal = b.laboratorio?.nombre?.toLowerCase(); break;
@@ -134,6 +137,22 @@ export default function Materiales() {
     setDeleteDialog(null);
   };
 
+  const [comprarMaterial, setComprarMaterial] = useState<Material | null>(null);
+
+  const handleComprar = async (cantidad: number) => {
+    if (!comprarMaterial) return;
+    const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+    await createMovimiento({
+      tipoMovimiento: 'compra',
+      cantidad,
+      materialId: comprarMaterial.id,
+      usuarioId: usuario.id,
+      observacion: 'Compra registrada desde inventario',
+    });
+    setSnackbar({ msg: `Compra registrada: +${cantidad} ${comprarMaterial.name}`, severity: 'success' });
+    loadData();
+  };
+
   return (
     <AppLayout>
       <Box className="inventario-page">
@@ -158,8 +177,10 @@ export default function Materiales() {
                   <TableSortLabel active={sortBy === 'descripcion'} direction={sortBy === 'descripcion' ? sortOrder : 'asc'} onClick={() => handleSort('descripcion')}>Descripción</TableSortLabel>
                 </TableCell>
                 <TableCell sortDirection={sortBy === 'stock' ? sortOrder : false}>
-                  <TableSortLabel active={sortBy === 'stock'} direction={sortBy === 'stock' ? sortOrder : 'asc'} onClick={() => handleSort('stock')}>Stock</TableSortLabel>
+                  <TableSortLabel active={sortBy === 'stock'} direction={sortBy === 'stock' ? sortOrder : 'asc'} onClick={() => handleSort('stock')}>Stock Físico</TableSortLabel>
                 </TableCell>
+                <TableCell>Stock Comp.</TableCell>
+                <TableCell>Disponible</TableCell>
                 <TableCell sortDirection={sortBy === 'stockMinimo' ? sortOrder : false}>
                   <TableSortLabel active={sortBy === 'stockMinimo'} direction={sortBy === 'stockMinimo' ? sortOrder : 'asc'} onClick={() => handleSort('stockMinimo')}>Stock Mínimo</TableSortLabel>
                 </TableCell>
@@ -174,9 +195,9 @@ export default function Materiales() {
             </TableHead>
             <TableBody>
                {loading ? (
-                <TableSkeleton columns={7} rows={5} />
+                <TableSkeleton columns={9} rows={5} />
               ) : materiales.length === 0 ? (
-                <TableRow><TableCell colSpan={7} align="center">No hay materiales</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} align="center">No hay materiales</TableCell></TableRow>
               ) : sortedMateriales.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell>{m.name}</TableCell>
@@ -184,10 +205,13 @@ export default function Materiales() {
                   <TableCell>
                     <Chip label={m.stock} color={m.stockMinimo > 0 && m.stock <= m.stockMinimo ? 'warning' : 'default'} size="small" />
                   </TableCell>
+                  <TableCell>{m.stockComprometido || 0}</TableCell>
+                  <TableCell>{(m.stock || 0) - (m.stockComprometido || 0)}</TableCell>
                   <TableCell>{m.stockMinimo}</TableCell>
                   <TableCell>{m.unit || '-'}</TableCell>
                   <TableCell>{m.laboratorio?.nombre || '-'}</TableCell>
                   <TableCell>
+                    <IconButton size="small" onClick={() => setComprarMaterial(m)} title="Comprar" color="success"><ShoppingCartIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => navigate(`/movimientos?materialId=${m.id}`)} title="Ver movimientos"><HistoryIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => openEdit(m)}><EditIcon fontSize="small" /></IconButton>
                     <IconButton size="small" onClick={() => setDeleteDialog(m.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
@@ -216,6 +240,8 @@ export default function Materiales() {
         onSave={handleSave}
         onClose={() => setDialogOpen(false)}
       />
+
+      <CompraDialog open={comprarMaterial !== null} itemName={comprarMaterial?.name || ''} onConfirm={handleComprar} onClose={() => setComprarMaterial(null)} />
 
       <Dialog open={deleteDialog !== null} onClose={() => setDeleteDialog(null)}>
         <DialogTitle>¿Eliminar material?</DialogTitle>

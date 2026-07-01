@@ -1,4 +1,4 @@
 export interface SnackbarState {
   msg: string;
-  severity: 'success' | 'error';
+  severity: 'success' | 'error' | 'info' | 'warning';
 }

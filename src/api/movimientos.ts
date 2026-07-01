@@ -17,13 +17,15 @@ export async function getMovimientos(tipo?: string, materialId?: number, reactiv
 }
 
 export async function createMovimiento(data: {
-  tipoMovimiento: 'entrada' | 'salida';
+  tipoMovimiento: string;
   cantidad: number;
   fecha?: string;
   observacion?: string;
   usuarioId: number;
   materialId?: number;
   reactivoId?: number;
+  equipoId?: number;
+  sustanciaBasicaId?: number;
 }) {
   const res = await authFetch(`${API_URL}/inventario/movimientos`, {
     method: 'POST',

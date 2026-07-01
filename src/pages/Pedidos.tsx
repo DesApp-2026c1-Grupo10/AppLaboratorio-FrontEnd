@@ -1,18 +1,16 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Snackbar, Alert, Box, CircularProgress, Switch, FormControlLabel, Button, FormControl, InputLabel, Select, MenuItem, Tab, Tabs, Chip } from '@mui/material';
 import type { SnackbarState } from '../types/snackbar';
-import type { ActividadPredefinida } from '../types/actividadPredefinida';
 
-import PedidoForm from '../components/pedidos/PedidoForm';
 import PedidoTable from '../components/pedidos/PedidoTable';
 import FinalizarDialog from '../components/pedidos/FinalizarDialog';
-import ActividadesPredefinidasPanel from '../components/pedidos/ActividadesPredefinidasPanel';
 import RevisarPedidoDialog from '../components/pedidos/RevisarPedidoDialog';
 import RevisionPendienteDialog from '../components/pedidos/RevisionPendienteDialog';
-import { getPedidos, createPedido, aprobarPedido, rechazarPedido, cancelarPedido, finalizarPedido, crearRevision, getPedidosConRevisionPendiente } from '../api/pedidos';
+import ActividadesPredefinidasPanel from '../components/pedidos/ActividadesPredefinidasPanel';
+import { getPedidos, aprobarPedido, rechazarPedido, cancelarPedido, finalizarPedido, deshacerAprobacionPedido, crearRevision, createPedido, getPedidosConRevisionPendiente } from '../api/pedidos';
 import { getLaboratorios } from '../api/laboratorios';
 import { getUsuarios } from '../api/usuarios';
-import { useWebSocket } from '../hooks/useWebSocket';
 import { useWs } from '../context/WsContext';
 import type { Pedido } from '../types/pedido';
 import type { Laboratorio } from '../types/laboratorio';
@@ -34,12 +32,12 @@ const pills = [
 
 export default function Pedidos() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const navigate = useNavigate();
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([]);
   const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
   const [loading, setLoading] = useState(true);
   const [pedidoToFinalize, setPedidoToFinalize] = useState<Pedido | null>(null);
   const [soloMios, setSoloMios] = useState(false);
-  const [showActividades, setShowActividades] = useState(false);
   const [pedidoToReview, setPedidoToReview] = useState<Pedido | null>(null);
   const [pedidoRevision, setPedidoRevision] = useState<Pedido | null>(null);
   const [pedidosConRevision, setPedidosConRevision] = useState<Set<number>>(new Set());
@@ -52,9 +50,9 @@ export default function Pedidos() {
   const [tabIndex, setTabIndex] = useState(0);
   const [filtroEstado, setFiltroEstado] = useState('');
   const [cardsLimit, setCardsLimit] = useState(CARDS_POR_PAGINA);
+  const [showActividades, setShowActividades] = useState(false);
 
-  const wsUrl = `ws://${window.location.hostname}:3005/ws`;
-  const { connected, on } = useWs();
+  const { on } = useWs();
 
   const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
   const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
@@ -98,31 +96,6 @@ export default function Pedidos() {
     }
   }
 
-  const refreshLaboratorios = async () => {
-    try {
-      const data = await getLaboratorios();
-      setLaboratorios(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const agregarPedido = async (pedido: Pedido) => {
-    try {
-      if (!usuarioLogueado) {
-        setSnackbar({ msg: 'Sesión expirada. Por favor volvé a iniciar sesión.', severity: 'error' });
-        return;
-      }
-      const pedidoConUsuario = { ...pedido, usuarioId: usuarioLogueado.id };
-      const nuevoPedido = await createPedido(pedidoConUsuario);
-      setPedidos([...pedidos, nuevoPedido]);
-      setSnackbar({ msg: '¡Pedido creado con éxito!', severity: 'success' });
-    } catch (error) {
-      setSnackbar({ msg: 'No se pudo crear: ' + (error instanceof Error ? error.message : 'Error desconocido'), severity: 'error' });
-      throw error;
-    }
-  };
-
   const aceptarPedido = async (id: number) => {
     try {
       await aprobarPedido(id, usuarioLogueado?.id);
@@ -131,6 +104,17 @@ export default function Pedidos() {
       setSnackbar({ msg: 'Pedido aprobado correctamente. Pedidos conflictivos rechazados.', severity: 'success' });
     } catch (error) {
       setSnackbar({ msg: error instanceof Error ? error.message : 'Error al aprobar pedido', severity: 'error' });
+    }
+  };
+
+  const deshacer = async (id: number) => {
+    try {
+      await deshacerAprobacionPedido(id, usuarioLogueado?.id);
+      const pedidosData = await getPedidos();
+      setPedidos(pedidosData);
+      setSnackbar({ msg: 'Aprobación deshecha. Stock restaurado.', severity: 'success' });
+    } catch (error) {
+      setSnackbar({ msg: error instanceof Error ? error.message : 'Error al deshacer aprobación', severity: 'error' });
     }
   };
 
@@ -148,31 +132,9 @@ export default function Pedidos() {
     try {
       const pedidoActualizado = await cancelarPedido(id, usuarioLogueado.id);
       setPedidos((prev) => prev.map((p) => p.id === id ? { ...p, ...pedidoActualizado } : p));
-      setSnackbar({ msg: 'Pedido cancelado', severity: 'info' });
+      setSnackbar({ msg: 'Pedido cancelado', severity: 'success' });
     } catch (error) {
       setSnackbar({ msg: error instanceof Error ? error.message : 'Error al cancelar pedido', severity: 'error' });
-    }
-  };
-
-  const handleSelectActividad = async (act: ActividadPredefinida, fecha: string, horaInicio: string, horaFin: string) => {
-    if (!usuarioLogueado) return;
-    try {
-      const pedidoData: Record<string, any> = {
-        fecha, horaInicio, horaFin,
-        laboratorioId: act.laboratorioId,
-        cantidadAlumnos: act.cantidadAlumnos,
-        descripcion: act.descripcion || `Desde actividad: ${act.nombre}`,
-        usuarioId: usuarioLogueado.id,
-        materiales: act.config?.materiales || [],
-        reactivos: act.config?.reactivos || [],
-        equipos: act.config?.equipos || [],
-      };
-      const nuevoPedido = await createPedido(pedidoData);
-      setPedidos([...pedidos, nuevoPedido]);
-      setShowActividades(false);
-      setSnackbar({ msg: `Pedido creado desde la actividad "${act.nombre}"`, severity: 'success' });
-    } catch (error) {
-      setSnackbar({ msg: 'Error al crear pedido: ' + (error instanceof Error ? error.message : ''), severity: 'error' });
     }
   };
 
@@ -190,6 +152,41 @@ export default function Pedidos() {
   };
 
   const handleVerRevision = (pedido: Pedido) => setPedidoRevision(pedido);
+
+  const agregarPedido = async (data: Record<string, any>) => {
+    const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+    await createPedido({ ...data, usuarioId: usuario.id });
+    setSnackbar({ msg: 'Pedido creado correctamente', severity: 'success' });
+    loadData();
+  };
+
+  const refreshLaboratorios = async () => {
+    const labs = await getLaboratorios();
+    setLaboratorios(labs);
+  };
+
+  const handleSelectActividad = async (actividad: any, fecha: string, horaInicio: string, horaFin: string) => {
+    setShowActividades(false);
+    const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+    try {
+      await createPedido({
+        fecha,
+        horaInicio,
+        horaFin,
+        laboratorioId: actividad.laboratorioId,
+        cantidadAlumnos: actividad.cantidadAlumnos,
+        descripcion: actividad.descripcion || '',
+        materiales: actividad.config?.materiales || [],
+        reactivos: actividad.config?.reactivos || [],
+        equipos: actividad.config?.equipos || [],
+        usuarioId: usuario.id,
+      });
+      setSnackbar({ msg: `Actividad "${actividad.nombre}" creada como pedido`, severity: 'success' });
+      loadData();
+    } catch (err) {
+      setSnackbar({ msg: err instanceof Error ? err.message : 'Error al crear pedido desde actividad', severity: 'error' });
+    }
+  };
 
   const marcarRevisionVista = (pedidoId: number) => {
     setRevisionesRespuestaVistas((prev) => new Set(prev).add(pedidoId));
@@ -305,13 +302,17 @@ export default function Pedidos() {
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
           ) : (
             <>
-              <PedidoForm laboratorios={laboratorios} onSubmitPedido={agregarPedido} onRefreshLabs={refreshLaboratorios} onActividadesClick={() => setShowActividades(true)} />
-              <ActividadesPredefinidasPanel
-                open={showActividades}
-                laboratorios={laboratorios}
-                onSelectActividad={handleSelectActividad}
-                onClose={() => setShowActividades(false)}
-              />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button variant="contained" size="large" onClick={() => navigate('/pedidos/nuevo')}>
+                    + Nuevo Pedido
+                  </Button>
+                  <Button variant="outlined" size="large" onClick={() => setShowActividades(true)}>
+                    Actividades Predefinidas
+                  </Button>
+                </Box>
+                <Box />
+              </Box>
 
               <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2, mt: 4 }}>
                 <Tabs value={tabIndex} onChange={handleTabChange}>
@@ -345,7 +346,7 @@ export default function Pedidos() {
                     </FormControl>
                     <FormControl size="small" sx={{ minWidth: 160 }}>
                       <InputLabel>Usuario</InputLabel>
-                      <Select value={filtroUser} label="Usuario" onChange={(e) => setFiltroUser(e.target.value as number | '')}>
+                      <Select value={filtroUser} label="Usuario" onChange={(e) => { setFiltroUser(e.target.value as number | ''); if (soloMios) setSoloMios(false); }}>
                         <MenuItem value="">Todos</MenuItem>
                         {usuarios.map((u) => <MenuItem key={u.id} value={u.id}>{u.nombre} {u.apellido}</MenuItem>)}
                       </Select>
@@ -376,6 +377,7 @@ export default function Pedidos() {
                     aceptarPedido={aceptarPedido}
                     rechazarPedido={rechazar}
                     cancelarPedido={handleCancelar}
+                    deshacerAprobacion={deshacer}
                     finalizarPedido={handleFinalizarClick}
                     esAdmin={esAdmin}
                     onRevisar={esAdmin ? handleRevisar : undefined}
@@ -401,6 +403,7 @@ export default function Pedidos() {
                   aceptarPedido={aceptarPedido}
                   rechazarPedido={rechazar}
                   cancelarPedido={handleCancelar}
+                  deshacerAprobacion={deshacer}
                   esAdmin={esAdmin}
                   onRevisar={esAdmin ? handleRevisar : undefined}
                   onVerRevision={handleVerRevision}
@@ -444,6 +447,13 @@ export default function Pedidos() {
         pedido={pedidoToFinalize}
         onConfirm={handleFinalizarConfirm}
         onCancel={() => setPedidoToFinalize(null)}
+      />
+
+      <ActividadesPredefinidasPanel
+        open={showActividades}
+        laboratorios={laboratorios}
+        onSelectActividad={handleSelectActividad}
+        onClose={() => setShowActividades(false)}
       />
     </AppLayout>
   );

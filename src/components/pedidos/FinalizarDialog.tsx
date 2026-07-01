@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography,
-  Table, TableBody, TableCell, TableHead, TableRow, TextField,
+  Table, TableBody, TableCell, TableHead, TableRow, TextField, Checkbox,
   FormControl, Select, MenuItem, Alert,
 } from '@mui/material';
 import type { Pedido } from '../../types/pedido';
@@ -11,6 +11,7 @@ interface MaterialForm {
   name: string;
   solicitado: number;
   cantidad: number;
+  descartado: boolean;
 }
 
 interface ReactivoForm {
@@ -18,6 +19,7 @@ interface ReactivoForm {
   name: string;
   solicitado: number;
   cantidad: number;
+  descartado: boolean;
 }
 
 interface EquipoForm {
@@ -30,8 +32,8 @@ interface Props {
   open: boolean;
   pedido: Pedido | null;
   onConfirm: (data: {
-    materiales: { id: number; cantidad: number }[];
-    reactivos: { id: number; cantidad: number }[];
+    materiales: { id: number; cantidad: number; descartado: boolean }[];
+    reactivos: { id: number; cantidad: number; descartado: boolean }[];
     equipos: { id: number; estado: string }[];
   }) => Promise<void>;
   onCancel: () => void;
@@ -48,6 +50,7 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
       name: m.name,
       solicitado: m.PedidoMaterial?.cantidad || 0,
       cantidad: m.PedidoMaterial?.cantidad || 0,
+      descartado: false,
     }))
   );
   const [reactivos, setReactivos] = useState<ReactivoForm[]>(() =>
@@ -56,6 +59,7 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
       name: r.name,
       solicitado: r.PedidoReactivo?.cantidad || 0,
       cantidad: r.PedidoReactivo?.cantidad || 0,
+      descartado: false,
     }))
   );
   const [equipos, setEquipos] = useState<EquipoForm[]>(() =>
@@ -72,8 +76,8 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
     setError('');
     setSubmitting(true);
     try {
-      const mats = materiales.map((m) => ({ id: m.id, cantidad: m.cantidad }));
-      const reas = reactivos.map((r) => ({ id: r.id, cantidad: r.cantidad }));
+      const mats = materiales.map((m) => ({ id: m.id, cantidad: m.cantidad, descartado: m.descartado }));
+      const reas = reactivos.map((r) => ({ id: r.id, cantidad: r.cantidad, descartado: r.descartado }));
       const eqs = equipos.map((e) => ({ id: e.id, estado: e.estado }));
       await onConfirm({ materiales: mats, reactivos: reas, equipos: eqs });
     } catch (err) {
@@ -98,6 +102,7 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
                   <TableCell>Material</TableCell>
                   <TableCell align="right">Solicitado</TableCell>
                   <TableCell align="right">Consumido</TableCell>
+                  <TableCell align="center">Descartar</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -120,6 +125,14 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
                         sx={{ width: 80 }}
                       />
                     </TableCell>
+                    <TableCell align="center">
+                      <Checkbox
+                        checked={m.descartado}
+                        onChange={(e) => setMateriales(materiales.map((item) =>
+                          item.id === m.id ? { ...item, descartado: e.target.checked } : item
+                        ))}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -136,6 +149,7 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
                   <TableCell>Reactivo</TableCell>
                   <TableCell align="right">Solicitado</TableCell>
                   <TableCell align="right">Consumido</TableCell>
+                  <TableCell align="center">Descartar</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -156,6 +170,14 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
                         }}
                         slotProps={{ htmlInput: { min: 0 } }}
                         sx={{ width: 80 }}
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Checkbox
+                        checked={r.descartado}
+                        onChange={(e) => setReactivos(reactivos.map((item) =>
+                          item.id === r.id ? { ...item, descartado: e.target.checked } : item
+                        ))}
                       />
                     </TableCell>
                   </TableRow>
@@ -189,7 +211,7 @@ export default function FinalizarDialog({ open, pedido, onConfirm, onCancel }: P
                         >
                           <MenuItem value="Disponible">Disponible</MenuItem>
                           <MenuItem value="Mantenimiento">Enviar a Mantenimiento</MenuItem>
-                          <MenuItem value="Roto">Roto / Dar de baja</MenuItem>
+                          <MenuItem value="Fuera de servicio">Roto / Dar de baja</MenuItem>
                         </Select>
                       </FormControl>
                     </TableCell>

@@ -24,7 +24,7 @@ export function WsProvider({ children }: { children: ReactNode }) {
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout>>();
 
   const connect = useCallback(() => {
-    const url = `ws://${window.location.hostname}:3005/ws`;
+    const url = `ws://${window.location.hostname}:3001/ws`;
     const ws = new WebSocket(url);
     wsRef.current = ws;
 

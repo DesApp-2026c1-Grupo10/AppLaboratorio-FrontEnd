@@ -18,7 +18,7 @@ interface MovimientoDialogProps {
 export default function MovimientoDialog({ open, materiales, reactivos, onSave, onClose }: MovimientoDialogProps) {
   const [tipoItem, setTipoItem] = useState<'material' | 'reactivo'>('material');
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
-    defaultValues: { tipoMovimiento: 'entrada' as 'entrada' | 'salida', cantidad: 1, fecha: new Date().toISOString().split('T')[0], observacion: '', materialId: '', reactivoId: '' },
+    defaultValues: { tipoMovimiento: 'entrada', cantidad: 1, fecha: new Date().toISOString().split('T')[0], observacion: '', materialId: '', reactivoId: '' },
   });
 
   useEffect(() => {
@@ -43,6 +43,10 @@ export default function MovimientoDialog({ open, materiales, reactivos, onSave, 
                   <Select {...field} label="Tipo de Movimiento">
                     <MenuItem value="entrada">Entrada</MenuItem>
                     <MenuItem value="salida">Salida</MenuItem>
+                    <MenuItem value="descarte">Descarte</MenuItem>
+                    <MenuItem value="compra">Compra</MenuItem>
+                    <MenuItem value="producido">Producido</MenuItem>
+                    <MenuItem value="usado">Usado</MenuItem>
                   </Select>
                 </FormControl>
               )}

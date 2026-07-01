@@ -47,7 +47,7 @@ export default function ActividadesPredefinidasPanel({ open, laboratorios, onSel
     }
   }, [open]);
 
-  const misActividades = actividades;
+  const misActividades = actividades.filter((a) => a.usuarioId === usuarioLogueado?.id);
 
   const refresh = async () => {
     const updated = await getActividadesPredefinidas();

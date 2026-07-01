@@ -113,7 +113,7 @@ export default function Movimientos() {
       <Box className="inventario-page">
         <Box className="inventario-header">
           <Typography variant="h4">Movimientos de Stock</Typography>
-          <Typography variant="body1" className="inventario-subtitle">Registro de entradas y salidas de materiales y reactivos</Typography>
+          <Typography variant="body1" className="inventario-subtitle">Registro de movimientos de stock de materiales y reactivos</Typography>
         </Box>
 
         <Box className="inv-toolbar">
@@ -121,8 +121,12 @@ export default function Movimientos() {
             <InputLabel>Tipo mov.</InputLabel>
             <Select value={tipoFilter} label="Tipo mov." onChange={(e) => setTipoFilter(e.target.value)}>
               <MenuItem value="">Todos</MenuItem>
-              <MenuItem value="entrada">Entradas</MenuItem>
-              <MenuItem value="salida">Salidas</MenuItem>
+              <MenuItem value="entrada">Entrada</MenuItem>
+              <MenuItem value="salida">Salida</MenuItem>
+              <MenuItem value="descarte">Descarte</MenuItem>
+              <MenuItem value="compra">Compra</MenuItem>
+              <MenuItem value="producido">Producido</MenuItem>
+              <MenuItem value="usado">Usado</MenuItem>
             </Select>
           </FormControl>
           <FormControl size="small" sx={{ minWidth: 130 }}>
@@ -188,7 +192,7 @@ export default function Movimientos() {
                 <TableRow key={m.id}>
                   <TableCell>{new Date(m.fecha).toLocaleDateString()}</TableCell>
                   <TableCell>
-                    <Chip label={m.tipoMovimiento === 'entrada' ? 'Entrada' : 'Salida'} color={m.tipoMovimiento === 'entrada' ? 'success' : 'error'} size="small" />
+                    <Chip label={m.tipoMovimiento} color={m.tipoMovimiento === 'entrada' || m.tipoMovimiento === 'compra' ? 'success' : m.tipoMovimiento === 'salida' || m.tipoMovimiento === 'usado' ? 'error' : m.tipoMovimiento === 'descarte' ? 'warning' : 'info'} size="small" />
                   </TableCell>
                   <TableCell>{m.material?.name || m.reactivo?.name || '-'}</TableCell>
                   <TableCell>{m.cantidad}</TableCell>

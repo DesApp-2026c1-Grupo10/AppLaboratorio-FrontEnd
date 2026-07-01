@@ -3,6 +3,7 @@ export interface Material {
   name: string;
   descripcion?: string;
   stock: number;
+  stockComprometido?: number;
   stockMinimo: number;
   unit?: string;
   laboratorioId?: number;

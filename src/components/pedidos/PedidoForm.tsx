@@ -1,35 +1,19 @@
 import { useState, useEffect } from 'react';
 import {
   Box, Button, FormControl, InputLabel, MenuItem, Select, TextField,
-  Chip, Typography, Autocomplete, IconButton, Alert, Tooltip,
+  Chip, Typography, Autocomplete, IconButton, Alert, Stepper, Step, StepLabel, Paper,
+  FormControlLabel, Checkbox, List, ListItem, ListItemIcon, ListItemText, alpha,
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
-import { Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, ArrowBack, ArrowForward } from '@mui/icons-material';
 import { getMateriales } from '../../api/materiales';
 import { getReactivos } from '../../api/reactivos';
 import { getEquipos } from '../../api/equipos';
+import { checkPedido } from '../../api/pedidos';
 import type { Material } from '../../types/material';
 import type { Reactivo } from '../../types/reactivo';
 import type { Equipo } from '../../types/equipo';
 import type { Laboratorio } from '../../types/laboratorio';
-
-interface Props {
-  onSubmitPedido: (data: Record<string, any>) => Promise<any>;
-  laboratorios: Laboratorio[];
-  onRefreshLabs?: () => void;
-  mode?: 'pedido' | 'actividad';
-  onSubmitActividad?: (data: Record<string, any>) => Promise<any>;
-  actividadInicial?: {
-    nombre?: string;
-    laboratorioId?: number;
-    cantidadAlumnos?: number;
-    descripcion?: string;
-    materiales?: { id: number; cantidad: number }[];
-    reactivos?: { id: number; cantidad: number }[];
-    equipos?: number[];
-  } | null;
-  onActividadesClick?: () => void;
-}
 
 interface ItemSeleccionado {
   id: number;
@@ -37,22 +21,48 @@ interface ItemSeleccionado {
   cantidad: number;
   stock: number;
   unidadMedida?: string;
+  deDespensa?: boolean;
 }
 
-export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs, mode = 'pedido', onSubmitActividad, actividadInicial, onActividadesClick }: Props) {
+interface Props {
+  onSubmitPedido: (data: Record<string, any>) => Promise<any>;
+  laboratorios: Laboratorio[];
+  onRefreshLabs?: () => void;
+  mode?: 'pedido' | 'actividad';
+  onSubmitActividad?: (data: Record<string, any>) => Promise<any>;
+  actividadInicial?: any;
+  onActividadesClick?: () => void;
+}
+
+const EDIFICIOS = ['Malvinas', 'Libertador', 'Justicia Social'];
+
+const STEPS = ['Edificio & Lab', 'Materiales', 'Reactivos', 'Equipos', 'Revisar'];
+
+export default function PedidoForm({ onSubmitPedido, laboratorios, mode = 'pedido', onSubmitActividad, onActividadesClick }: Props) {
+  const [step, setStep] = useState(0);
   const [materiales, setMateriales] = useState<Material[]>([]);
   const [reactivos, setReactivos] = useState<Reactivo[]>([]);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
-
   const [selectedMaterials, setSelectedMaterials] = useState<ItemSeleccionado[]>([]);
   const [selectedReactivos, setSelectedReactivos] = useState<ItemSeleccionado[]>([]);
   const [selectedEquipos, setSelectedEquipos] = useState<number[]>([]);
   const [error, setError] = useState('');
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [reviewChecked, setReviewChecked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm({
+  const { register, control, reset, watch, getValues, formState: { errors } } = useForm({
     defaultValues: { nombre: '', fecha: '', horaInicio: '', horaFin: '', laboratorioId: '', cantidadAlumnos: 1, descripcion: '' },
   });
+
+  const [edificio, setEdificio] = useState('');
+  const watchFecha = watch('fecha');
+  const watchHoraInicio = watch('horaInicio');
+  const watchHoraFin = watch('horaFin');
+  const watchCantidadAlumnos = watch('cantidadAlumnos');
+  const [despensaMaterials, setDespensaMaterials] = useState<ItemSeleccionado[]>([]);
+  const [despensaReactivos, setDespensaReactivos] = useState<ItemSeleccionado[]>([]);
+  const [despensaEquipos, setDespensaEquipos] = useState<number[]>([]);
 
   useEffect(() => {
     Promise.all([getMateriales(), getReactivos(), getEquipos()])
@@ -61,62 +71,92 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
   }, []);
 
   useEffect(() => {
-    if (mode === 'actividad' && actividadInicial) {
-      reset({
-        nombre: actividadInicial.nombre || '',
-        laboratorioId: String(actividadInicial.laboratorioId || ''),
-        cantidadAlumnos: actividadInicial.cantidadAlumnos || 1,
-        descripcion: actividadInicial.descripcion || '',
-      });
-      setSelectedMaterials(
-        (actividadInicial.materiales || []).map((m) => {
-          const mat = materiales.find((x) => x.id === m.id);
-          return { id: m.id, name: mat?.name || `ID#${m.id}`, cantidad: m.cantidad, stock: mat?.stock ?? 0 };
-        })
-      );
-      setSelectedReactivos(
-        (actividadInicial.reactivos || []).map((r) => {
-          const rea = reactivos.find((x) => x.id === r.id);
-          return { id: r.id, name: rea?.name || `ID#${r.id}`, cantidad: r.cantidad, stock: rea?.stock ?? 0, unidadMedida: rea?.unidadMedida };
-        })
-      );
-      setSelectedEquipos(actividadInicial.equipos || []);
+    if (step === STEPS.length - 1 && !reviewChecked) {
+      setReviewChecked(true);
+      const labId = getValues('laboratorioId');
+      if (mode !== 'actividad' && labId && watchFecha && watchHoraInicio && watchHoraFin) {
+        const payload = {
+          fecha: watchFecha,
+          horaInicio: watchHoraInicio,
+          horaFin: watchHoraFin,
+          laboratorioId: Number(labId),
+          cantidadAlumnos: Number(getValues('cantidadAlumnos')),
+          equipos: selectedEquipos,
+          materiales: selectedMaterials.map((m) => ({ id: m.id, cantidad: m.cantidad })),
+          reactivos: selectedReactivos.map((r) => ({ id: r.id, cantidad: r.cantidad })),
+        };
+        checkPedido(payload).then((result) => {
+          setWarnings(result.warnings);
+        }).catch(console.error);
+      }
     }
-  }, [actividadInicial, materiales, reactivos]);
+  }, [step]);
 
-  const resetForm = () => {
-    reset({ nombre: '', fecha: '', horaInicio: '', horaFin: '', laboratorioId: '', cantidadAlumnos: 1, descripcion: '' });
-    setSelectedMaterials([]);
-    setSelectedReactivos([]);
-    setSelectedEquipos([]);
-    setError('');
-  };
+  const laboratoriosFiltrados = laboratorios.filter((l) => {
+    if (l.edificio !== edificio) return false;
+    if (watchCantidadAlumnos && l.capacidad < Number(watchCantidadAlumnos)) return false;
+    return true;
+  });
 
   const equiposDisponibles = equipos.filter((eq) => !['Mantenimiento', 'Fuera de servicio'].includes(eq.status));
 
-  const onSubmit = async (data: Record<string, any>) => {
+  const resetForm = () => {
+    reset({ nombre: '', fecha: '', horaInicio: '', horaFin: '', laboratorioId: '', cantidadAlumnos: 1, descripcion: '' });
+    setEdificio('');
+    setSelectedMaterials([]);
+    setSelectedReactivos([]);
+    setSelectedEquipos([]);
+    setDespensaMaterials([]);
+    setDespensaReactivos([]);
+    setDespensaEquipos([]);
+    setStep(0);
     setError('');
-    if (mode === 'actividad') {
-      if (!data.nombre?.trim() || !data.laboratorioId) {
-        setError('Completá todos los campos obligatorios');
+    setWarnings([]);
+    setReviewChecked(false);
+  };
+
+  const handleNext = () => {
+    if (step === 0) {
+      if (!edificio) { setError('Seleccioná un edificio'); return; }
+      if (mode !== 'actividad' && (!watchFecha || !watchHoraInicio || !watchHoraFin)) { setError('Completá fecha y horarios'); return; }
+      if (mode !== 'actividad' && watchHoraInicio && watchHoraFin && watchHoraInicio >= watchHoraFin) { setError('La hora de inicio debe ser anterior a la hora de fin'); return; }
+      if (!getValues('laboratorioId')) { setError('Seleccioná un laboratorio'); return; }
+      if (watchCantidadAlumnos && Number(watchCantidadAlumnos) > 0 && laboratoriosFiltrados.length === 0) {
+        setError('No hay laboratorio con esa capacidad en el edificio seleccionado');
         return;
       }
-    } else if (!data.fecha || !data.horaInicio || !data.horaFin || !data.laboratorioId) {
-      setError('Completá todos los campos obligatorios');
+    }
+    setError('');
+    setStep(s => Math.min(s + 1, STEPS.length - 1));
+  };
+
+  const handleBack = () => {
+    if (step === STEPS.length - 1) { setWarnings([]); setReviewChecked(false); }
+    setStep(s => Math.max(s - 1, 0));
+  };
+
+  const crearPedido = async (data: Record<string, any>) => {
+    setError('');
+    const labId = data.laboratorioId;
+    if (!labId) { setError('Seleccioná un laboratorio'); return; }
+    if (mode !== 'actividad' && (!data.fecha || !data.horaInicio || !data.horaFin)) {
+      setError('Completá fecha y horarios');
       return;
     }
     setSubmitting(true);
     try {
       const payload = {
         ...data,
-        laboratorioId: Number(data.laboratorioId),
+        laboratorioId: Number(labId),
         cantidadAlumnos: Number(data.cantidadAlumnos),
         materiales: selectedMaterials.map((m) => ({ id: m.id, cantidad: m.cantidad })),
         reactivos: selectedReactivos.map((r) => ({ id: r.id, cantidad: r.cantidad })),
         equipos: selectedEquipos,
+        despensaMateriales: despensaMaterials.map((m) => ({ id: m.id, cantidad: m.cantidad })),
+        despensaReactivos: despensaReactivos.map((r) => ({ id: r.id, cantidad: r.cantidad })),
+        despensaEquipos,
       };
       if (mode === 'actividad' && onSubmitActividad) {
-        if (!data.nombre?.trim()) { setError('El nombre de la actividad es obligatorio'); setSubmitting(false); return; }
         await onSubmitActividad(payload);
       } else {
         await onSubmitPedido(payload);
@@ -129,167 +169,345 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, onRefreshLabs
     }
   };
 
-  return (
-    <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="h6">Datos del Pedido</Typography>
+  const renderChecklistItems = (
+    items: any[],
+    selected: ItemSeleccionado[],
+    setSelected: React.Dispatch<React.SetStateAction<ItemSeleccionado[]>>,
+    despensaItems: ItemSeleccionado[],
+    setDespensa: React.Dispatch<React.SetStateAction<ItemSeleccionado[]>>,
+    labelKey: string,
+    unitKey: string,
+  ) => {
+    const itemsDelEdificio = items.filter((i) => {
+      const lab = i.laboratorio;
+      return lab && lab.edificio === edificio;
+    });
+    const itemsDeDespensa = items.filter((i) => {
+      const lab = i.laboratorio;
+      return (lab && lab.edificio === 'Despensa') || (!i.laboratorioId);
+    });
 
-      {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
+    const isSelected = (id: number) => selected.some((s) => s.id === id);
+    const isDespensaSelected = (id: number) => despensaItems.some((s) => s.id === id);
+    const getSelected = (id: number) => selected.find((s) => s.id === id);
+    const getDespensa = (id: number) => despensaItems.find((s) => s.id === id);
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-        {mode === 'actividad' && (
-          <TextField label="Nombre de la actividad *" {...register('nombre', { required: mode === 'actividad' })} error={!!errors.nombre} helperText={errors.nombre?.message} required sx={{ minWidth: 250 }} />
+    const toggleItem = (item: any) => {
+      if (isSelected(item.id)) {
+        setSelected(selected.filter((s) => s.id !== item.id));
+      } else {
+        setSelected([...selected, { id: item.id, name: item.name || item[labelKey], cantidad: 1, stock: item.stock }]);
+      }
+    };
+
+    const toggleDespensa = (item: any) => {
+      if (isDespensaSelected(item.id)) {
+        setDespensa(despensaItems.filter((s) => s.id !== item.id));
+      } else {
+        setDespensa([...despensaItems, { id: item.id, name: item.name || item[labelKey], cantidad: 1, stock: item.stock, deDespensa: true }]);
+      }
+    };
+
+    const updateCantidad = (id: number, val: number) => {
+      setSelected(selected.map((s) => s.id === id ? { ...s, cantidad: Math.max(1, val) } : s));
+    };
+
+    const updateDespensaCantidad = (id: number, val: number) => {
+      setDespensa(despensaItems.map((s) => s.id === id ? { ...s, cantidad: Math.max(1, val) } : s));
+    };
+
+    return (
+      <Box>
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>En {edificio}:</Typography>
+        {itemsDelEdificio.length === 0 ? (
+          <Typography variant="caption" color="text.secondary">No hay items en este edificio</Typography>
+        ) : (
+          <List dense>
+            {itemsDelEdificio.map((item) => (
+              <ListItem key={item.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, mb: 0.5, bgcolor: isSelected(item.id) ? alpha('#6366F1', 0.04) : 'transparent' }}>
+                <ListItemIcon>
+                  <Checkbox checked={isSelected(item.id)} onChange={() => toggleItem(item)} />
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.name}
+                  secondary={`Stock: ${item.stock} ${item[unitKey] || ''}`}
+                  sx={{ flex: 1 }}
+                />
+                {isSelected(item.id) && (
+                  <TextField
+                    type="number"
+                    size="small"
+                    value={getSelected(item.id)?.cantidad || 1}
+                    onChange={(e) => updateCantidad(item.id, Number(e.target.value))}
+                    slotProps={{ htmlInput: { min: 1, max: item.stock } }}
+                    sx={{ width: 70, ml: 1 }}
+                  />
+                )}
+              </ListItem>
+            ))}
+          </List>
         )}
-        {mode !== 'actividad' && (
-          <TextField label="Fecha" type="date" {...register('fecha', { required: mode !== 'actividad' })} slotProps={{ inputLabel: { shrink: true } }} error={!!errors.fecha} required sx={{ minWidth: 180 }} />
+
+        {itemsDeDespensa.length > 0 && (
+          <>
+            <Box sx={{ borderTop: '1px dashed', borderColor: 'warning.light', my: 2 }} />
+            <Typography variant="subtitle2" sx={{ mb: 1, color: 'warning.dark' }}>En Despensa:</Typography>
+            <List dense>
+              {itemsDeDespensa.map((item) => (
+                <ListItem key={item.id} sx={{ border: '1px solid', borderColor: 'warning.light', borderRadius: 2, mb: 0.5, bgcolor: isDespensaSelected(item.id) ? alpha('#f59e0b', 0.06) : 'transparent' }}>
+                  <ListItemIcon>
+                    <Checkbox checked={isDespensaSelected(item.id)} onChange={() => toggleDespensa(item)} color="warning" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.name}
+                    secondary={`Stock: ${item.stock} ${item[unitKey] || ''} (en Despensa)`}
+                    sx={{ flex: 1 }}
+                  />
+                  {isDespensaSelected(item.id) && (
+                    <TextField
+                      type="number"
+                      size="small"
+                      value={getDespensa(item.id)?.cantidad || 1}
+                      onChange={(e) => updateDespensaCantidad(item.id, Number(e.target.value))}
+                      slotProps={{ htmlInput: { min: 1, max: item.stock } }}
+                      sx={{ width: 70, ml: 1 }}
+                    />
+                  )}
+                </ListItem>
+              ))}
+            </List>
+          </>
         )}
-        {mode !== 'actividad' && (
-          <TextField label="Hora Inicio" placeholder="08:00" {...register('horaInicio', { required: mode !== 'actividad' })} error={!!errors.horaInicio} required sx={{ minWidth: 140 }} />
-        )}
-        {mode !== 'actividad' && (
-          <TextField label="Hora Fin" placeholder="10:00" {...register('horaFin', { required: mode !== 'actividad' })} error={!!errors.horaFin} required sx={{ minWidth: 140 }} />
-        )}
-        <TextField label="Cant. Alumnos" type="number" {...register('cantidadAlumnos', { valueAsNumber: true, min: { value: 1, message: 'Mínimo 1' } })} error={!!errors.cantidadAlumnos} helperText={errors.cantidadAlumnos?.message} required sx={{ minWidth: 140 }} />
       </Box>
+    );
+  };
 
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
-        <Controller
-          name="laboratorioId"
-          control={control}
-          rules={{ required: true }}
-          render={({ field }) => (
-            <FormControl fullWidth required error={!!errors.laboratorioId}>
-              <InputLabel>Laboratorio</InputLabel>
-              <Select {...field} label="Laboratorio">
-                {laboratorios.map((lab) => <MenuItem key={lab.id} value={lab.id}>{lab.nombre} (Cap: {lab.capacidad})</MenuItem>)}
+  const renderStepContent = () => {
+    switch (step) {
+      case 0:
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="h6">Paso 1: Edificio y Laboratorio</Typography>
+            <FormControl fullWidth>
+              <InputLabel>Edificio</InputLabel>
+              <Select value={edificio} label="Edificio" onChange={(e) => { setEdificio(e.target.value); reset({ ...getValues(), laboratorioId: '' } as any); }}>
+                {EDIFICIOS.map((ed) => <MenuItem key={ed} value={ed}>{ed}</MenuItem>)}
               </Select>
             </FormControl>
-          )}
-        />
-        {onRefreshLabs && (
-          <Tooltip title="Recargar laboratorios">
-            <IconButton onClick={onRefreshLabs} size="small" sx={{ mb: 0.5 }}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-        )}
-      </Box>
-
-      {/* Materiales */}
-      <Box>
-        <Typography variant="subtitle1" sx={{ mb: 1 }}>Materiales</Typography>
-        <Autocomplete
-          options={materiales}
-          getOptionLabel={(o) => {
-            const sel = selectedMaterials.find((sm) => sm.id === o.id);
-            return sel ? `${o.name} (${sel.cantidad} en pedido)` : `${o.name} (Stock: ${o.stock} ${o.unit || ''})`;
-          }}
-          onChange={(_, v) => {
-            if (v) {
-              const existing = selectedMaterials.find((sm) => sm.id === v.id);
-              if (existing) {
-                setSelectedMaterials(selectedMaterials.map((sm) => sm.id === v.id ? { ...sm, cantidad: sm.cantidad + 1 } : sm));
-              } else {
-                setSelectedMaterials([...selectedMaterials, { id: v.id, name: v.name, cantidad: 1, stock: v.stock }]);
-              }
-            }
-          }}
-          renderInput={(params) => <TextField {...params} size="small" placeholder="Agregar material..." />}
-          fullWidth
-        />
-        {selectedMaterials.map((m) => (
-          <Box key={m.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-            <Chip label={m.name} color={m.cantidad > m.stock ? 'error' : 'primary'} size="small" />
-            <TextField type="number" size="small" value={m.cantidad} onChange={(e) => setSelectedMaterials(selectedMaterials.map((sm) => sm.id === m.id ? { ...sm, cantidad: Number(e.target.value) } : sm))} slotProps={{ htmlInput: { min: 1, max: m.stock } }} sx={{ width: 80 }} />
-            <Typography variant="caption" color="text.secondary">disp: {m.stock}</Typography>
-            <IconButton size="small" onClick={() => setSelectedMaterials(selectedMaterials.filter((sm) => sm.id !== m.id))} color="error"><DeleteIcon fontSize="small" /></IconButton>
-          </Box>
-        ))}
-      </Box>
-
-      {/* Reactivos */}
-      <Box>
-        <Typography variant="subtitle1" sx={{ mb: 1 }}>Reactivos</Typography>
-        <Autocomplete
-          options={reactivos}
-          getOptionLabel={(o) => {
-            const sel = selectedReactivos.find((sr) => sr.id === o.id);
-            return sel ? `${o.name} (${sel.cantidad} en pedido)` : `${o.name} (Stock: ${o.stock} ${o.unidadMedida || ''})`;
-          }}
-          onChange={(_, v) => {
-            if (v) {
-              const existing = selectedReactivos.find((sr) => sr.id === v.id);
-              if (existing) {
-                setSelectedReactivos(selectedReactivos.map((sr) => sr.id === v.id ? { ...sr, cantidad: sr.cantidad + 1 } : sr));
-              } else {
-                setSelectedReactivos([...selectedReactivos, { id: v.id, name: v.name, cantidad: 1, stock: v.stock, unidadMedida: v.unidadMedida }]);
-              }
-            }
-          }}
-          renderInput={(params) => <TextField {...params} size="small" placeholder="Agregar reactivo..." />}
-          fullWidth
-        />
-        {selectedReactivos.map((r) => (
-            <Box key={r.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-              <Chip label={r.name} color={r.cantidad > r.stock ? 'error' : 'secondary'} size="small" />
-              <TextField type="number" size="small" value={r.cantidad}
-                onChange={(e) => setSelectedReactivos(selectedReactivos.map((sr) => sr.id === r.id ? { ...sr, cantidad: Number(e.target.value) } : sr))}
-                slotProps={{ htmlInput: { min: 1, max: r.stock }, input: { endAdornment: <Typography variant="caption" color="text.secondary">{r.unidadMedida || 'u'}</Typography> } }} sx={{ width: 100 }}
-              />
-              <Typography variant="caption" color="text.secondary">disp: {r.stock}</Typography>
-              <IconButton size="small" onClick={() => setSelectedReactivos(selectedReactivos.filter((sr) => sr.id !== r.id))} color="error"><DeleteIcon fontSize="small" /></IconButton>
-            </Box>
-          ))}
-      </Box>
-
-      {/* Equipos */}
-      <Box>
-        <Typography variant="subtitle1" sx={{ mb: 1 }}>Equipos</Typography>
-        <FormControl fullWidth>
-          <InputLabel>Seleccionar equipos</InputLabel>
-          <Select
-            multiple
-            value={selectedEquipos}
-            label="Seleccionar equipos"
-            onChange={(e) => setSelectedEquipos(e.target.value as number[])}
-            renderValue={(selected) => (
-              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                {selected.map((id) => {
-                  const eq = equipos.find((e) => e.id === id);
-                  return eq ? <Chip key={id} label={eq.name} size="small" color="success" /> : null;
-                })}
+            {mode === 'actividad' ? (
+              <TextField label="Nombre de la actividad *" {...register('nombre', { required: true })} error={!!errors.nombre} helperText={errors.nombre?.message} required fullWidth />
+            ) : (
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <TextField label="Fecha" type="date" {...register('fecha', { required: true })} slotProps={{ inputLabel: { shrink: true } }} error={!!errors.fecha} required sx={{ minWidth: 180 }} />
+                <TextField label="Hora Inicio" placeholder="08:00" {...register('horaInicio', { required: true })} error={!!errors.horaInicio} required sx={{ minWidth: 140 }} />
+                <TextField label="Hora Fin" placeholder="10:00" {...register('horaFin', { required: true })} error={!!errors.horaFin} required sx={{ minWidth: 140 }} />
               </Box>
             )}
-          >
-            {equiposDisponibles.length === 0 ? (
-              <MenuItem disabled>No hay equipos disponibles</MenuItem>
-            ) : (
-              equiposDisponibles.map((eq) => (
-                <MenuItem key={eq.id} value={eq.id}>
-                  {eq.name} {eq.laboratorio ? `(${eq.laboratorio.nombre})` : ''}
-                </MenuItem>
-              ))
+            <TextField label="Cant. Alumnos" type="number" {...register('cantidadAlumnos', { valueAsNumber: true, min: { value: 1, message: 'Mínimo 1' } })} error={!!errors.cantidadAlumnos} helperText={errors.cantidadAlumnos?.message} required sx={{ minWidth: 140 }} />
+            <Controller
+              name="laboratorioId"
+              control={control}
+              rules={{ required: true }}
+              render={({ field }) => (
+                <FormControl fullWidth required error={!!errors.laboratorioId}>
+                  <InputLabel>Laboratorio</InputLabel>
+                  <Select {...field} label="Laboratorio">
+                    {!edificio ? (
+                      <MenuItem disabled>Seleccioná un edificio primero</MenuItem>
+                    ) : laboratoriosFiltrados.length === 0 ? (
+                      <MenuItem disabled>No hay laboratorio con esa capacidad</MenuItem>
+                    ) : (
+                      laboratoriosFiltrados.map((lab) => <MenuItem key={lab.id} value={lab.id}>{lab.nombre} (Cap: {lab.capacidad})</MenuItem>)
+                    )}
+                  </Select>
+                </FormControl>
+              )}
+            />
+          </Box>
+        );
+      case 1:
+        return (
+          <Box>
+            <Typography variant="h6" sx={{ mb: 2 }}>Paso 2: Materiales</Typography>
+            {renderChecklistItems(materiales, selectedMaterials, setSelectedMaterials, despensaMaterials, setDespensaMaterials, 'name', 'unit')}
+          </Box>
+        );
+      case 2:
+        return (
+          <Box>
+            <Typography variant="h6" sx={{ mb: 2 }}>Paso 3: Reactivos</Typography>
+            {renderChecklistItems(reactivos, selectedReactivos, setSelectedReactivos, despensaReactivos, setDespensaReactivos, 'name', 'unidadMedida')}
+          </Box>
+        );
+      case 3:
+        return (
+          <Box>
+            <Typography variant="h6" sx={{ mb: 2 }}>Paso 4: Equipos</Typography>
+            {(() => {
+              const equiposDelEdificio = equiposDisponibles.filter((eq) => {
+                const lab = eq.laboratorio;
+                return lab && lab.edificio === edificio;
+              });
+              const equiposDeDespensa = equiposDisponibles.filter((eq) => {
+                const lab = eq.laboratorio;
+                return (lab && lab.edificio === 'Despensa') || (!eq.laboratorioId);
+              });
+              return (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>En {edificio}:</Typography>
+                  {equiposDelEdificio.length === 0 ? (
+                    <Typography variant="caption" color="text.secondary">No hay equipos en este edificio</Typography>
+                  ) : (
+                    <List dense>
+                      {equiposDelEdificio.map((eq) => (
+                        <ListItem key={eq.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, mb: 0.5, bgcolor: selectedEquipos.includes(eq.id) ? alpha('#6366F1', 0.04) : 'transparent' }}>
+                          <ListItemIcon>
+                            <Checkbox checked={selectedEquipos.includes(eq.id)} onChange={() => setSelectedEquipos(selectedEquipos.includes(eq.id) ? selectedEquipos.filter(id => id !== eq.id) : [...selectedEquipos, eq.id])} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={eq.name}
+                            secondary={eq.laboratorio ? eq.laboratorio.nombre : ''}
+                            sx={{ flex: 1 }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+                  {equiposDeDespensa.length > 0 && (
+                    <>
+                      <Box sx={{ borderTop: '1px dashed', borderColor: 'warning.light', my: 2 }} />
+                      <Typography variant="subtitle2" sx={{ mb: 1, color: 'warning.dark' }}>En Despensa:</Typography>
+                      <List dense>
+                        {equiposDeDespensa.map((eq) => (
+                          <ListItem key={eq.id} sx={{ border: '1px solid', borderColor: 'warning.light', borderRadius: 2, mb: 0.5, bgcolor: despensaEquipos.includes(eq.id) ? alpha('#f59e0b', 0.06) : 'transparent' }}>
+                            <ListItemIcon>
+                              <Checkbox checked={despensaEquipos.includes(eq.id)} onChange={() => setDespensaEquipos(despensaEquipos.includes(eq.id) ? despensaEquipos.filter(id => id !== eq.id) : [...despensaEquipos, eq.id])} color="warning" />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={eq.name}
+                              secondary="En Despensa"
+                              sx={{ flex: 1 }}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </>
+                  )}
+                </Box>
+              );
+            })()}
+          </Box>
+        );
+      case 4: {
+        const labSeleccionado = laboratorios.find(l => l.id === Number(getValues('laboratorioId')));
+        return (
+          <Box>
+            <Typography variant="h6" sx={{ mb: 2 }}>Paso 5: Revisar Pedido</Typography>
+            {warnings.length > 0 && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Advertencias:</Typography>
+                {warnings.map((w, i) => <Typography key={i} variant="body2">• {w}</Typography>)}
+              </Alert>
             )}
-          </Select>
-          {selectedEquipos.length > 0 && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-              No se muestran equipos en Mantenimiento o Fuera de servicio
-            </Typography>
-          )}
-        </FormControl>
-      </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Chip label={`Edificio: ${edificio}`} color="primary" variant="outlined" />
+                <Chip label={`Lab: ${labSeleccionado?.nombre || '-'}`} color="primary" variant="outlined" />
+                {mode !== 'actividad' && <Chip label={`Fecha: ${watchFecha}`} color="primary" variant="outlined" />}
+                {mode !== 'actividad' && <Chip label={`${watchHoraInicio} - ${watchHoraFin}`} color="primary" variant="outlined" />}
+                <Chip label={`Alumnos: ${getValues('cantidadAlumnos')}`} color="primary" variant="outlined" />
+              </Box>
+              {selectedMaterials.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2">Materiales:</Typography>
+                  {selectedMaterials.map(m => <Chip key={m.id} label={`${m.name} x${m.cantidad}`} size="small" sx={{ mr: 0.5, mb: 0.5 }} />)}
+                </Box>
+              )}
+              {despensaMaterials.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: 'warning.dark' }}>Materiales (traer de Despensa):</Typography>
+                  {despensaMaterials.map(m => <Chip key={m.id} label={`${m.name} x${m.cantidad}`} size="small" color="warning" variant="outlined" sx={{ mr: 0.5, mb: 0.5 }} />)}
+                </Box>
+              )}
+              {selectedReactivos.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2">Reactivos:</Typography>
+                  {selectedReactivos.map(r => <Chip key={r.id} label={`${r.name} x${r.cantidad}`} size="small" sx={{ mr: 0.5, mb: 0.5 }} />)}
+                </Box>
+              )}
+              {despensaReactivos.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: 'warning.dark' }}>Reactivos (traer de Despensa):</Typography>
+                  {despensaReactivos.map(r => <Chip key={r.id} label={`${r.name} x${r.cantidad}`} size="small" color="warning" variant="outlined" sx={{ mr: 0.5, mb: 0.5 }} />)}
+                </Box>
+              )}
+              {selectedEquipos.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2">Equipos:</Typography>
+                  {selectedEquipos.map(id => {
+                    const eq = equipos.find(e => e.id === id);
+                    return <Chip key={id} label={eq?.name || `ID#${id}`} size="small" sx={{ mr: 0.5, mb: 0.5 }} />;
+                  })}
+                </Box>
+              )}
+              {despensaEquipos.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: 'warning.dark' }}>Equipos (traer de Despensa):</Typography>
+                  {despensaEquipos.map(id => {
+                    const eq = equipos.find(e => e.id === id);
+                    return <Chip key={id} label={eq?.name || `ID#${id}`} size="small" color="warning" variant="outlined" sx={{ mr: 0.5, mb: 0.5 }} />;
+                  })}
+                </Box>
+              )}
+            </Box>
+          </Box>
+        );
+      }
+      default:
+        return null;
+    }
+  };
 
-      <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap' }}>
-        <Button type="submit" variant="contained" color="primary" size="large" disabled={submitting}>
-          {submitting ? 'Creando...' : mode === 'actividad' ? 'Crear Actividad' : 'Crear Pedido'}
-        </Button>
-        <Button type="button" variant="outlined" color="error" size="large" onClick={resetForm}>
-          Cancelar
-        </Button>
-        {onActividadesClick && (
-          <Button type="button" variant="outlined" size="large" onClick={(e) => { e.currentTarget.blur(); onActividadesClick(); }}>
-            Actividades Predefinidas
+  return (
+    <Box>
+      {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
+
+      <Stepper activeStep={step} alternativeLabel sx={{ mb: 3 }}>
+        {STEPS.map((label) => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}
+      </Stepper>
+
+      <Paper sx={{ p: 3, mb: 2 }}>
+        {renderStepContent()}
+      </Paper>
+
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, flexWrap: 'wrap', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {step > 0 && (
+            <Button startIcon={<ArrowBack />} onClick={handleBack} variant="outlined">
+              Anterior
+            </Button>
+          )}
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {step < STEPS.length - 1 ? (
+            <Button type="button" endIcon={<ArrowForward />} onClick={handleNext} variant="contained">
+              Siguiente
+            </Button>
+          ) : (
+            <Button type="button" variant="contained" color="primary" size="large" disabled={submitting}
+              onClick={() => { if (step === STEPS.length - 1) crearPedido(getValues()); }}>
+              {submitting ? 'Creando...' : mode === 'actividad' ? 'Crear Actividad' : 'Crear Pedido'}
+            </Button>
+          )}
+          <Button type="button" variant="outlined" color="error" size="large" onClick={resetForm}>
+            Cancelar
           </Button>
-        )}
+          {onActividadesClick && step === 0 && (
+            <Button type="button" variant="outlined" size="large" onClick={(e) => { e.currentTarget.blur(); onActividadesClick(); }}>
+              Actividades Predefinidas
+            </Button>
+          )}
+        </Box>
       </Box>
     </Box>
   );
