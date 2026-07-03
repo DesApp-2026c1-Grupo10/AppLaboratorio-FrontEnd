@@ -13,6 +13,9 @@ import EstadoChip from './EstadoChip';
 import type { Pedido } from '../../types/pedido';
 import type { Tarea } from '../../types/tarea';
 import { getTareas, toggleTarea } from '../../api/pedidos';
+import { getMateriales } from '../../api/materiales';
+import { getReactivos } from '../../api/reactivos';
+import { getEquipos } from '../../api/equipos';
 import { formatTime } from '../../utils/format';
 
 interface Props {
@@ -78,13 +81,23 @@ function ResourceRow({ name, cantidad, unit, stock, needed }: { name: string; ca
 export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [loadingTareas, setLoadingTareas] = useState(false);
+  const [inventario, setInventario] = useState<{ materiales: any[]; reactivos: any[]; equipos: any[] }>({ materiales: [], reactivos: [], equipos: [] });
 
   useEffect(() => {
     if (open && pedido) {
       setLoadingTareas(true);
-      getTareas(pedido.id).then(setTareas).finally(() => setLoadingTareas(false));
+      Promise.all([
+        getTareas(pedido.id),
+        getMateriales(),
+        getReactivos(),
+        getEquipos(),
+      ]).then(([ts, mats, reas, eqs]) => {
+        setTareas(ts);
+        setInventario({ materiales: mats, reactivos: reas, equipos: eqs });
+      }).finally(() => setLoadingTareas(false));
     } else {
       setTareas([]);
+      setInventario({ materiales: [], reactivos: [], equipos: [] });
     }
   }, [open, pedido]);
 
@@ -146,13 +159,17 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
             ))}
           </Paper>
 
-          {pedido.descripcion && (
-            <SectionCard icon={<DescriptionOutlined sx={sectionIconSx} />} title="Descripción">
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: 'text.secondary', lineHeight: 1.7 }}>
-                {pedido.descripcion}
-              </Typography>
-            </SectionCard>
-          )}
+          {pedido.descripcion && (() => {
+            const cleanDesc = pedido.descripcion.replace(/(\[Advertencias:.*?\]|__DESPENSA__:\{.*\})/gs, '').trim();
+            if (!cleanDesc) return null;
+            return (
+              <SectionCard icon={<DescriptionOutlined sx={sectionIconSx} />} title="Descripción">
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: 'text.secondary', lineHeight: 1.7 }}>
+                  {cleanDesc}
+                </Typography>
+              </SectionCard>
+            );
+          })()}
 
           {pedido.materiales && pedido.materiales.length > 0 && (
             <SectionCard icon={<Inventory2Outlined sx={sectionIconSx} />} title="Materiales" subtitle={`${pedido.materiales.length} items`}>
@@ -198,6 +215,36 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
               </Box>
             </SectionCard>
           )}
+
+          {(() => {
+            let despensa: { despensaMateriales?: { id: number; cantidad: number }[]; despensaReactivos?: { id: number; cantidad: number }[]; despensaEquipos?: { id: number }[] } | null = null;
+            const desc = pedido.descripcion || '';
+            console.log('[DEBUG DetallePedidoDialog] Raw descripcion:', desc);
+            const m = desc.match(/__DESPENSA__:(\{.*\})/);
+            console.log('[DEBUG DetallePedidoDialog] Match:', m ? m[1] : 'NO MATCH');
+            if (m) {
+              try { despensa = JSON.parse(m[1]); } catch (_) {}
+            }
+            console.log('[DEBUG DetallePedidoDialog] Parsed despensa:', despensa);
+            if (!despensa || (!despensa.despensaMateriales?.length && !despensa.despensaReactivos?.length && !despensa.despensaEquipos?.length)) return null;
+            const totalItems = (despensa.despensaMateriales?.length || 0) + (despensa.despensaReactivos?.length || 0) + (despensa.despensaEquipos?.length || 0);
+            return (
+              <SectionCard icon={<Inventory2Outlined sx={sectionIconSx} />} title="Solicitado a Despensa" subtitle={`${totalItems} items`}>
+                {despensa.despensaMateriales?.map((d: any) => {
+                  const item = inventario.materiales.find((m: any) => m.id === d.id);
+                  return <ResourceRow key={`dm-${d.id}`} name={item?.name || `Material #${d.id}`} cantidad={d.cantidad} unit="uds" stock={item?.stock || 0} needed={d.cantidad} />;
+                })}
+                {despensa.despensaReactivos?.map((d: any) => {
+                  const item = inventario.reactivos.find((m: any) => m.id === d.id);
+                  return <ResourceRow key={`dr-${d.id}`} name={item?.name || `Reactivo #${d.id}`} cantidad={d.cantidad} unit={item?.unidadMedida || 'uds'} stock={item?.stock || 0} needed={d.cantidad} />;
+                })}
+                {despensa.despensaEquipos?.map((d: any) => {
+                  const item = inventario.equipos.find((m: any) => m.id === d.id);
+                  return <ResourceRow key={`de-${d.id}`} name={item?.name || `Equipo #${d.id}`} cantidad={1} unit="uds" stock={item?.stock || 0} needed={1} />;
+                })}
+              </SectionCard>
+            );
+          })()}
 
           {loadingTareas ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>

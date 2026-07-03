@@ -182,10 +182,7 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, mode = 'pedid
       const lab = i.laboratorio;
       return lab && lab.edificio === edificio;
     });
-    const itemsDeDespensa = items.filter((i) => {
-      const lab = i.laboratorio;
-      return (lab && lab.edificio === 'Despensa') || (!i.laboratorioId);
-    });
+    const itemsDeDespensa = items.filter((i) => !i.laboratorioId);
 
     const isSelected = (id: number) => selected.some((s) => s.id === id);
     const isDespensaSelected = (id: number) => despensaItems.some((s) => s.id === id);

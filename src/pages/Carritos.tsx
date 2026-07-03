@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Typography, Card, CardContent, CardActions, Button, Chip,
-  Checkbox, Table, TableBody, TableCell, TableRow, CircularProgress, IconButton, alpha,
+  Checkbox, Table, TableHead, TableBody, TableCell, TableRow, CircularProgress, IconButton, alpha,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
@@ -29,6 +29,7 @@ export default function Carritos() {
     setLoading(true);
     try {
       const data = await getCarritos();
+      console.log('[DEBUG] Carritos API response:', data);
       setCarritos(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
