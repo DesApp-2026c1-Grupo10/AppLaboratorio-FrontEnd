@@ -119,7 +119,10 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, mode = 'pedid
     if (step === 0) {
       if (!edificio) { setError('Seleccioná un edificio'); return; }
       if (mode !== 'actividad' && (!watchFecha || !watchHoraInicio || !watchHoraFin)) { setError('Completá fecha y horarios'); return; }
-      if (mode !== 'actividad' && watchHoraInicio && watchHoraFin && watchHoraInicio >= watchHoraFin) { setError('La hora de inicio debe ser anterior a la hora de fin'); return; }
+      if (mode !== 'actividad' && watchHoraInicio && watchHoraFin) {
+        const toMin = (h: string) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
+        if (toMin(watchHoraInicio) >= toMin(watchHoraFin)) { setError('La hora de inicio debe ser anterior a la hora de fin'); return; }
+      }
       if (!getValues('laboratorioId')) { setError('Seleccioná un laboratorio'); return; }
       if (watchCantidadAlumnos && Number(watchCantidadAlumnos) > 0 && laboratoriosFiltrados.length === 0) {
         setError('No hay laboratorio con esa capacidad en el edificio seleccionado');

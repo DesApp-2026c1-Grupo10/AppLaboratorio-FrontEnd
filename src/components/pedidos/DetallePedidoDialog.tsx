@@ -12,11 +12,12 @@ import { useEffect, useState } from 'react';
 import EstadoChip from './EstadoChip';
 import type { Pedido } from '../../types/pedido';
 import type { Tarea } from '../../types/tarea';
-import { getTareas, toggleTarea } from '../../api/pedidos';
+import { getTareas, toggleTarea, getPedido } from '../../api/pedidos';
 import { getMateriales } from '../../api/materiales';
 import { getReactivos } from '../../api/reactivos';
 import { getEquipos } from '../../api/equipos';
 import { formatTime } from '../../utils/format';
+import { useWs } from '../../context/WsContext';
 
 interface Props {
   open: boolean;
@@ -79,15 +80,21 @@ function ResourceRow({ name, cantidad, unit, stock, needed }: { name: string; ca
 }
 
 export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
+  const [pedidoLocal, setPedidoLocal] = useState<Pedido | null>(pedido);
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [loadingTareas, setLoadingTareas] = useState(false);
   const [inventario, setInventario] = useState<{ materiales: any[]; reactivos: any[]; equipos: any[] }>({ materiales: [], reactivos: [], equipos: [] });
+  const { on } = useWs();
+
+  useEffect(() => { setPedidoLocal(pedido); }, [pedido]);
+
+  const pedidoActual = pedidoLocal || pedido;
 
   useEffect(() => {
-    if (open && pedido) {
+    if (open && pedidoActual) {
       setLoadingTareas(true);
       Promise.all([
-        getTareas(pedido.id),
+        getTareas(pedidoActual.id),
         getMateriales(),
         getReactivos(),
         getEquipos(),
@@ -99,15 +106,32 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
       setTareas([]);
       setInventario({ materiales: [], reactivos: [], equipos: [] });
     }
-  }, [open, pedido]);
+  }, [open, pedidoActual]);
+
+  useEffect(() => {
+    if (!open || !pedidoActual) return;
+    const pid = pedidoActual.id;
+    const refresh = () => {
+      getPedido(pid).then(setPedidoLocal);
+      getTareas(pid).then(setTareas);
+    };
+    const off1 = on('REVISION_CREADA', (data: any) => { console.log('[WS] REVISION_CREADA', data); if (data.pedidoId === pid) refresh(); });
+    const off2 = on('PEDIDO_MODIFICADO', (data: any) => { console.log('[WS] PEDIDO_MODIFICADO', data); if (data.id === pid) refresh(); });
+    const off3 = on('PEDIDO_APROBADO', (data: any) => { console.log('[WS] PEDIDO_APROBADO', data); if (data.id === pid) refresh(); });
+    const off4 = on('PEDIDO_RECHAZADO', (data: any) => { console.log('[WS] PEDIDO_RECHAZADO', data); if (data.id === pid) refresh(); });
+    const off5 = on('PEDIDO_CANCELADO', (data: any) => { console.log('[WS] PEDIDO_CANCELADO', data); if (data.id === pid) refresh(); });
+    const off6 = on('PEDIDO_FINALIZADO', (data: any) => { console.log('[WS] PEDIDO_FINALIZADO', data); if (data.id === pid) refresh(); });
+    const off7 = on('INVENTARIO_MODIFICADO', (data: any) => { console.log('[WS] INVENTARIO_MODIFICADO', data); refresh(); });
+    return () => { off1(); off2(); off3(); off4(); off5(); off6(); off7(); };
+  }, [open, pedidoActual, on]);
 
   const handleToggle = async (tarea: Tarea) => {
-    if (!pedido) return;
-    const updated = await toggleTarea(pedido.id, tarea.id);
+    if (!pedidoActual) return;
+    const updated = await toggleTarea(pedidoActual.id, tarea.id);
     setTareas((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   };
 
-  if (!pedido) return null;
+  if (!pedidoActual) return null;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
@@ -125,12 +149,12 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
             <Typography variant="h6" sx={{ fontWeight: 800, color: '#fff', letterSpacing: -0.5 }}>
-              Pedido #{pedido.id}
+              Pedido #{pedidoActual.id}
             </Typography>
-            <EstadoChip estado={pedido.estado} />
+            <EstadoChip estado={pedidoActual.estado} />
           </Box>
           <Typography variant="caption" sx={{ color: alpha('#fff', 0.7), fontWeight: 500 }}>
-            {pedido.Laboratorio?.nombre || 'Sin laboratorio'} &bull; {pedido.fecha?.split('-')?.reverse()?.join('/')}
+            {pedidoActual.Laboratorio?.nombre || 'Sin laboratorio'} &bull; {pedidoActual.fecha?.split('-')?.reverse()?.join('/')}
           </Typography>
         </Box>
         <IconButton onClick={onClose} sx={{ color: alpha('#fff', 0.7), '&:hover': { bgcolor: alpha('#fff', 0.1), color: '#fff' } }}>
@@ -142,10 +166,10 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
           <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
             {[
-              { icon: <CalendarToday sx={{ fontSize: 20 }} />, label: 'Fecha y Horario', value: `${pedido.fecha?.split('-')?.reverse()?.join('/')} | ${formatTime(pedido.horaInicio)} - ${formatTime(pedido.horaFin)}` },
-              { icon: <ScienceOutlined sx={{ fontSize: 20 }} />, label: 'Laboratorio', value: pedido.Laboratorio?.nombre || '-' },
-              { icon: <PeopleAlt sx={{ fontSize: 20 }} />, label: 'Alumnos', value: pedido.cantidadAlumnos },
-              { icon: <Person sx={{ fontSize: 20 }} />, label: 'Docente', value: pedido.Usuario ? `${pedido.Usuario.nombre} ${pedido.Usuario.apellido}` : '-', noBorder: true },
+              { icon: <CalendarToday sx={{ fontSize: 20 }} />, label: 'Fecha y Horario', value: `${pedidoActual.fecha?.split('-')?.reverse()?.join('/')} | ${formatTime(pedidoActual.horaInicio)} - ${formatTime(pedidoActual.horaFin)}` },
+              { icon: <ScienceOutlined sx={{ fontSize: 20 }} />, label: 'Laboratorio', value: pedidoActual.Laboratorio?.nombre || '-' },
+              { icon: <PeopleAlt sx={{ fontSize: 20 }} />, label: 'Alumnos', value: pedidoActual.cantidadAlumnos },
+              { icon: <Person sx={{ fontSize: 20 }} />, label: 'Docente', value: pedidoActual.Usuario ? `${pedidoActual.Usuario.nombre} ${pedidoActual.Usuario.apellido}` : '-', noBorder: true },
             ].map((item, i) => (
               <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2.5, py: 1.8, borderBottom: item.noBorder ? 'none' : '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', p: 1, borderRadius: 1.5, bgcolor: alpha('#6366F1', 0.08), color: '#6366F1' }}>
@@ -159,8 +183,8 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
             ))}
           </Paper>
 
-          {pedido.descripcion && (() => {
-            const cleanDesc = pedido.descripcion.replace(/(\[Advertencias:.*?\]|__DESPENSA__:\{.*\})/gs, '').trim();
+          {pedidoActual.descripcion && (() => {
+            const cleanDesc = pedidoActual.descripcion.replace(/(\[Advertencias:.*?\]|__DESPENSA__:\{.*\})/gs, '').trim();
             if (!cleanDesc) return null;
             return (
               <SectionCard icon={<DescriptionOutlined sx={sectionIconSx} />} title="Descripción">
@@ -171,9 +195,9 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
             );
           })()}
 
-          {pedido.materiales && pedido.materiales.length > 0 && (
-            <SectionCard icon={<Inventory2Outlined sx={sectionIconSx} />} title="Materiales" subtitle={`${pedido.materiales.length} items`}>
-              {pedido.materiales.map((m) => (
+          {pedidoActual.materiales && pedidoActual.materiales.length > 0 && (
+            <SectionCard icon={<Inventory2Outlined sx={sectionIconSx} />} title="Materiales" subtitle={`${pedidoActual.materiales.length} items`}>
+              {pedidoActual.materiales.map((m) => (
                 <ResourceRow
                   key={m.id}
                   name={m.name}
@@ -186,9 +210,9 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
             </SectionCard>
           )}
 
-          {pedido.reactivos && pedido.reactivos.length > 0 && (
-            <SectionCard icon={<BiotechOutlined sx={sectionIconSx} />} title="Reactivos" subtitle={`${pedido.reactivos.length} items`}>
-              {pedido.reactivos.map((r) => (
+          {pedidoActual.reactivos && pedidoActual.reactivos.length > 0 && (
+            <SectionCard icon={<BiotechOutlined sx={sectionIconSx} />} title="Reactivos" subtitle={`${pedidoActual.reactivos.length} items`}>
+              {pedidoActual.reactivos.map((r) => (
                 <ResourceRow
                   key={r.id}
                   name={r.name}
@@ -201,10 +225,10 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
             </SectionCard>
           )}
 
-          {pedido.Equipments && pedido.Equipments.length > 0 && (
-            <SectionCard icon={<BuildOutlined sx={sectionIconSx} />} title="Equipos" subtitle={`${pedido.Equipments.length} items`}>
+          {pedidoActual.Equipments && pedidoActual.Equipments.length > 0 && (
+            <SectionCard icon={<BuildOutlined sx={sectionIconSx} />} title="Equipos" subtitle={`${pedidoActual.Equipments.length} items`}>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {pedido.Equipments.map((eq) => (
+                {pedidoActual.Equipments.map((eq) => (
                   <Chip
                     key={eq.id}
                     label={eq.name}
@@ -218,7 +242,7 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
 
           {(() => {
             let despensa: { despensaMateriales?: { id: number; cantidad: number }[]; despensaReactivos?: { id: number; cantidad: number }[]; despensaEquipos?: { id: number }[] } | null = null;
-            const desc = pedido.descripcion || '';
+            const desc = pedidoActual.descripcion || '';
             console.log('[DEBUG DetallePedidoDialog] Raw descripcion:', desc);
             const m = desc.match(/__DESPENSA__:(\{.*\})/);
             console.log('[DEBUG DetallePedidoDialog] Match:', m ? m[1] : 'NO MATCH');

@@ -24,7 +24,9 @@ export function WsProvider({ children }: { children: ReactNode }) {
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout>>();
 
   const connect = useCallback(() => {
-    const url = `ws://${window.location.hostname}:3001/ws`;
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3005/api';
+    const port = new URL(apiBase).port || '3005';
+    const url = `ws://${window.location.hostname}:${port}/ws`;
     const ws = new WebSocket(url);
     wsRef.current = ws;
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box, Typography, TextField, Button, Table, TableBody, TableCell, TableRow,
-  Checkbox, CircularProgress, alpha, Card, CardContent,
+  Checkbox, CircularProgress, alpha, Card, CardContent, Snackbar, Alert,
 } from '@mui/material';
 import { ArrowBack, Send as SendIcon, Inventory2Outlined, BiotechOutlined, BuildOutlined } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
@@ -11,6 +11,7 @@ import { getLaboratorios } from '../api/laboratorios';
 import { getMateriales } from '../api/materiales';
 import { getReactivos } from '../api/reactivos';
 import { getEquipos } from '../api/equipos';
+import { useWs } from '../context/WsContext';
 import type { Pedido } from '../types/pedido';
 import type { PedidoRevision } from '../types/pedidoRevision';
 import type { Laboratorio } from '../types/laboratorio';
@@ -30,6 +31,7 @@ export default function RevisionPedido() {
   const [equipos, setEquipos] = useState<any[]>([]);
   const [revisiones, setRevisiones] = useState<PedidoRevision[]>([]);
   const [mensaje, setMensaje] = useState('');
+  const [snackbar, setSnackbar] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
 
   const [editFecha, setEditFecha] = useState('');
   const [editHoraInicio, setEditHoraInicio] = useState('');
@@ -100,6 +102,18 @@ export default function RevisionPedido() {
 
   useEffect(() => { fetchData(); }, [id]);
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [revisiones]);
+
+  const { on } = useWs();
+  useEffect(() => {
+    return on('REVISION_CREADA', (data) => {
+      if (data.pedidoId === Number(id)) {
+        setRevisiones((prev) => {
+          if (prev.some((r) => r.id === data.revision.id)) return prev;
+          return [...prev, data.revision];
+        });
+      }
+    });
+  }, [id, on]);
 
   const labEdificio = useMemo(() => {
     if (!editLabId) return null;
@@ -181,7 +195,8 @@ export default function RevisionPedido() {
       const revs = await getRevisiones(Number(id));
       setRevisiones(revs);
     } catch (e) {
-      console.error(e);
+      console.error('Error enviando mensaje:', e);
+      setSnackbar({ msg: e instanceof Error ? e.message : 'Error al enviar mensaje', severity: 'error' });
     }
   };
 
@@ -300,7 +315,7 @@ export default function RevisionPedido() {
               </Box>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <TextField label="Laboratorio" select value={editLabId} onChange={(e) => setEditLabId(Number(e.target.value))} size="small" sx={{ flex: 1 }}
-                  slotProps={{ select: { readOnly: !esAdmin } }} SelectProps={{ native: true }}>
+                  slotProps={{ select: { native: true, readOnly: !esAdmin } }}>
                   <option value="">Seleccionar...</option>
                   {laboratorios.map((l) => <option key={l.id} value={l.id}>{l.nombre} ({l.edificio})</option>)}
                 </TextField>
@@ -394,6 +409,7 @@ export default function RevisionPedido() {
           </CardContent>
         </Card>
       </Box>
+      {snackbar && <Snackbar open autoHideDuration={3000} onClose={() => setSnackbar(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}><Alert severity={snackbar.severity}>{snackbar.msg}</Alert></Snackbar>}
     </AppLayout>
   );
 }
