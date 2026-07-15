@@ -3,8 +3,11 @@ import type { Pedido } from '../types/pedido';
 import type { Tarea } from '../types/tarea';
 import type { PedidoRevision } from '../types/pedidoRevision';
 
-export async function getPedidos(): Promise<Pedido[]> {
-  const response = await authFetch(`${API_URL}/pedidos?_t=${Date.now()}`);
+export async function getPedidos(params?: { usuarioId?: number; rol?: string }): Promise<Pedido[]> {
+  const query = new URLSearchParams({ _t: String(Date.now()) });
+  if (params?.usuarioId) query.set('usuarioId', String(params.usuarioId));
+  if (params?.rol) query.set('rol', params.rol);
+  const response = await authFetch(`${API_URL}/pedidos?${query}`);
   if (!response.ok) throw new Error('Error obteniendo pedidos');
   const result = await response.json();
   return result.data || [];

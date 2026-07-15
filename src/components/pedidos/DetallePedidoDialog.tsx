@@ -241,17 +241,14 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
           )}
 
           {(() => {
-            let despensa: { despensaMateriales?: { id: number; cantidad: number }[]; despensaReactivos?: { id: number; cantidad: number }[]; despensaEquipos?: { id: number }[] } | null = null;
+            let despensa: { despensaMateriales?: { id: number; cantidad: number }[]; despensaReactivos?: { id: number; cantidad: number }[] } | null = null;
             const desc = pedidoActual.descripcion || '';
-            console.log('[DEBUG DetallePedidoDialog] Raw descripcion:', desc);
             const m = desc.match(/__DESPENSA__:(\{.*\})/);
-            console.log('[DEBUG DetallePedidoDialog] Match:', m ? m[1] : 'NO MATCH');
             if (m) {
               try { despensa = JSON.parse(m[1]); } catch (_) {}
             }
-            console.log('[DEBUG DetallePedidoDialog] Parsed despensa:', despensa);
-            if (!despensa || (!despensa.despensaMateriales?.length && !despensa.despensaReactivos?.length && !despensa.despensaEquipos?.length)) return null;
-            const totalItems = (despensa.despensaMateriales?.length || 0) + (despensa.despensaReactivos?.length || 0) + (despensa.despensaEquipos?.length || 0);
+            if (!despensa || (!despensa.despensaMateriales?.length && !despensa.despensaReactivos?.length)) return null;
+            const totalItems = (despensa.despensaMateriales?.length || 0) + (despensa.despensaReactivos?.length || 0);
             return (
               <SectionCard icon={<Inventory2Outlined sx={sectionIconSx} />} title="Solicitado a Despensa" subtitle={`${totalItems} items`}>
                 {despensa.despensaMateriales?.map((d: any) => {
@@ -261,10 +258,6 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
                 {despensa.despensaReactivos?.map((d: any) => {
                   const item = inventario.reactivos.find((m: any) => m.id === d.id);
                   return <ResourceRow key={`dr-${d.id}`} name={item?.name || `Reactivo #${d.id}`} cantidad={d.cantidad} unit={item?.unidadMedida || 'uds'} stock={item?.stock || 0} needed={d.cantidad} />;
-                })}
-                {despensa.despensaEquipos?.map((d: any) => {
-                  const item = inventario.equipos.find((m: any) => m.id === d.id);
-                  return <ResourceRow key={`de-${d.id}`} name={item?.name || `Equipo #${d.id}`} cantidad={1} unit="uds" stock={item?.stock || 0} needed={1} />;
                 })}
               </SectionCard>
             );
@@ -302,7 +295,7 @@ export default function DetallePedidoDialog({ open, pedido, onClose }: Props) {
       <DialogActions sx={{ px: 3, py: 2, bgcolor: '#f8fafc', borderTop: '1px solid', borderColor: 'divider' }}>
         <Button onClick={onClose} variant="contained" disableElevation
           endIcon={<ArrowForward />}
-          sx={{ borderRadius: 2.5, px: 3, textTransform: 'none', fontWeight: 600, bgcolor: '#0B1739', '&:hover': { bgcolor: '#1a237e' } }}
+          sx={{ borderRadius: '12px', px: 3.5, py: 1, textTransform: 'none', fontWeight: 700, background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)', boxShadow: '0 4px 15px rgba(99,102,241,0.35)', transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)', '&:hover': { background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)', transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(99,102,241,0.5)' } }}
         >
           Cerrar
         </Button>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
   TableHead, TableRow, TableSortLabel, Dialog, DialogTitle, DialogContent, DialogActions,
-  IconButton, Chip, Snackbar, Alert, TablePagination,
+  IconButton, Chip, Snackbar, Alert, TablePagination, Card, CardContent, CardActions, useMediaQuery,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, History as HistoryIcon, BuildCircle as BuildCircleIcon, ShoppingCart as ShoppingCartIcon } from '@mui/icons-material';
@@ -38,6 +38,7 @@ export default function Reactivos() {
   const [total, setTotal] = useState(0);
   const [sortBy, setSortBy] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const isMobile = useMediaQuery('(max-width: 900px)');
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -172,6 +173,52 @@ export default function Reactivos() {
         </Box>
 
         <Box className="inv-table-container">
+          {isMobile ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: 1 }}>
+              {loading ? <CircularProgress /> : sortedReactivos.length === 0 ? (
+                <Typography color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>No hay reactivos</Typography>
+              ) : sortedReactivos.map((r) => (
+                <Card key={r.id} variant="outlined" sx={{ borderRadius: 3 }}>
+                  <CardContent sx={{ pb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>{r.name}</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                      <Chip label={`Stock: ${r.stock}`} size="small" color={r.stockMinimo > 0 && r.stock <= r.stockMinimo ? 'warning' : r.stock <= 0 ? 'error' : 'default'} />
+                      <Chip label={`Comp: ${r.stockComprometido || 0}`} size="small" variant="outlined" />
+                      <Chip label={`Disp: ${(r.stock || 0) - (r.stockComprometido || 0)}`} size="small" variant="outlined" color="primary" />
+                      <Chip label={r.unidadMedida || '-'} size="small" variant="outlined" />
+                      {r.vencimiento && <Chip label={new Date(r.vencimiento).toLocaleDateString()} size="small" color={proxVencer(r.vencimiento) ? 'error' : 'default'} />}
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">{r.prep_time ? `Prep: ${r.prep_time} min` : ''}{r.laboratorio?.nombre ? ` | Lab: ${r.laboratorio.nombre}` : ''}</Typography>
+                    {r.composicion && r.composicion.length > 0 && (
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.5 }}>
+                        {r.composicion.map((c) => <Chip key={c.id} label={`${c.name} ${c.ReactivoSustancia.porcentaje}%`} size="small" variant="outlined" />)}
+                      </Box>
+                    )}
+                  </CardContent>
+                  <CardActions sx={{ flexWrap: 'wrap', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                    {r.composicion && r.composicion.length > 0 && (
+                      <IconButton size="small" onClick={() => setProducirReactivo(r)} title="Producir" color="primary"><BuildCircleIcon fontSize="small" /></IconButton>
+                    )}
+                    <IconButton size="small" onClick={() => setComprarReactivo(r)} title="Comprar" color="success"><ShoppingCartIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => navigate(`/movimientos?reactivoId=${r.id}`)} title="Ver movimientos"><HistoryIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => openEdit(r)}><EditIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => setDeleteDialog(r.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
+                  </CardActions>
+                </Card>
+              ))}
+              <TablePagination
+                component="div"
+                count={total}
+                page={page}
+                onPageChange={(_, p) => setPage(p)}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+                labelRowsPerPage="Filas por página:"
+                labelDisplayedRows={({ from, to, count }) => count !== 0 ? `${from}–${to} de ${count} reactivos` : '0 resultados'}
+              />
+            </Box>
+          ) : (
+          <>
           <Table>
             <TableHead>
               <TableRow>
@@ -252,6 +299,8 @@ export default function Reactivos() {
             labelRowsPerPage="Filas por página:"
             labelDisplayedRows={({ from, to, count }) => count !== 0 ? `${from}–${to} de ${count} reactivos` : '0 resultados'}
           />
+          </>
+          )}
         </Box>
       </Box>
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Box, Typography, Button, TextField, Table, TableBody, TableCell,
   TableHead, TableRow, TableSortLabel, Dialog, DialogTitle, DialogContent, DialogActions,
-  IconButton, Chip, Snackbar, Alert, TablePagination,
+  IconButton, Chip, Snackbar, Alert, TablePagination, CircularProgress, Card, CardContent, CardActions, useMediaQuery,
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from '@mui/icons-material';
 import AppLayout from '../components/layout/AppLayout';
@@ -26,6 +26,7 @@ export default function SustanciasBasicas() {
   const [total, setTotal] = useState(0);
   const [sortBy, setSortBy] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const isMobile = useMediaQuery('(max-width: 900px)');
 
   const handleSort = (column: string) => {
     if (sortBy === column) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -99,11 +100,47 @@ export default function SustanciasBasicas() {
 
         <Box className="inv-toolbar">
           <TextField size="small" placeholder="Buscar sustancia..." value={search} onChange={(e) => setSearch(e.target.value)} slotProps={{ input: { startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: '#94a3b8' }} /> } }} />
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nueva Sustancia</Button>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}
+            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, px: 3, py: 1, bgcolor: '#6366F1', transition: 'all 0.2s ease', '&:hover': { bgcolor: '#4F46E5', transform: 'translateY(-1px)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' } }}>
+            Nueva Sustancia
+          </Button>
 
         </Box>
 
         <Box className="inv-table-container">
+          {isMobile ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: 1 }}>
+              {loading ? <CircularProgress /> : sorted.length === 0 ? (
+                <Typography color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>No hay sustancias básicas</Typography>
+              ) : sorted.map((s) => (
+                <Card key={s.id} variant="outlined" sx={{ borderRadius: 3 }}>
+                  <CardContent sx={{ pb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>{s.name}</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      <Chip label={`Stock: ${s.stock}`} size="small" color={s.stockMinimo > 0 && s.stock <= s.stockMinimo ? 'warning' : s.stock <= 0 ? 'error' : 'default'} />
+                      <Chip label={`Mín: ${s.stockMinimo}`} size="small" variant="outlined" />
+                      <Chip label={s.unidadMedida || '-'} size="small" variant="outlined" />
+                    </Box>
+                  </CardContent>
+                  <CardActions onClick={(e) => e.stopPropagation()}>
+                    <IconButton size="small" onClick={() => openEdit(s)}><EditIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => setDeleteDialog(s.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
+                  </CardActions>
+                </Card>
+              ))}
+              <TablePagination
+                component="div"
+                count={total}
+                page={page}
+                onPageChange={(_, p) => setPage(p)}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+                labelRowsPerPage="Filas por página:"
+                labelDisplayedRows={({ from, to, count }) => count !== 0 ? `${from}–${to} de ${count} sustancias` : '0 resultados'}
+              />
+            </Box>
+          ) : (
+          <>
           <Table>
             <TableHead>
               <TableRow>
@@ -151,6 +188,8 @@ export default function SustanciasBasicas() {
             labelRowsPerPage="Filas por página:"
             labelDisplayedRows={({ from, to, count }) => count !== 0 ? `${from}–${to} de ${count} sustancias` : '0 resultados'}
           />
+          </>
+          )}
         </Box>
       </Box>
 

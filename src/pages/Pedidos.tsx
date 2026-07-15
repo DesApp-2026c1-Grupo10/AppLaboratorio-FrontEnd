@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Snackbar, Alert, Box, CircularProgress, Switch, FormControlLabel, Button, FormControl, InputLabel, Select, MenuItem, Tab, Tabs, Chip } from '@mui/material';
+import { Snackbar, Alert, Box, CircularProgress, Button, FormControl, InputLabel, Select, MenuItem, Tab, Tabs, Chip } from '@mui/material';
 import type { SnackbarState } from '../types/snackbar';
 
 import PedidoTable from '../components/pedidos/PedidoTable';
@@ -11,6 +11,8 @@ import ActividadesPredefinidasPanel from '../components/pedidos/ActividadesPrede
 import { getPedidos, aprobarPedido, rechazarPedido, cancelarPedido, finalizarPedido, deshacerAprobacionPedido, crearRevision, createPedido, getPedidosConRevisionPendiente } from '../api/pedidos';
 import { getLaboratorios } from '../api/laboratorios';
 import { getUsuarios } from '../api/usuarios';
+import { getMateriales } from '../api/materiales';
+import { getReactivos } from '../api/reactivos';
 import { useWs } from '../context/WsContext';
 import type { Pedido } from '../types/pedido';
 import type { Laboratorio } from '../types/laboratorio';
@@ -37,10 +39,11 @@ export default function Pedidos() {
   const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
   const [loading, setLoading] = useState(true);
   const [pedidoToFinalize, setPedidoToFinalize] = useState<Pedido | null>(null);
-  const [soloMios, setSoloMios] = useState(false);
   const [pedidoToReview, setPedidoToReview] = useState<Pedido | null>(null);
   const [pedidoRevision, setPedidoRevision] = useState<Pedido | null>(null);
   const [pedidosConRevision, setPedidosConRevision] = useState<Set<number>>(new Set());
+  const [allMateriales, setAllMateriales] = useState<{ id: number; name: string; stock?: number }[]>([]);
+  const [allReactivos, setAllReactivos] = useState<{ id: number; name: string; stock?: number }[]>([]);
   const [revisionesPorPedido, setRevisionesPorPedido] = useState<Record<number, { pendiente: boolean; procesada: boolean }>>({});
   const [revisionesRespuestaVistas, setRevisionesRespuestaVistas] = useState<Set<number>>(new Set());
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -79,16 +82,21 @@ export default function Pedidos() {
 
   async function loadData() {
     try {
-      const [pedidosData, laboratoriosData, revMap, usuariosData] = await Promise.all([
-        getPedidos(),
+      const fetchParams = esAdmin ? {} : { usuarioId: usuarioLogueado?.id, rol: usuarioLogueado?.rol };
+      const [pedidosData, laboratoriosData, revMap, usuariosData, matsData, reasData] = await Promise.all([
+        getPedidos(fetchParams),
         getLaboratorios(),
         getPedidosConRevisionPendiente(),
         getUsuarios(),
+        getMateriales(),
+        getReactivos(),
       ]);
       setPedidos(pedidosData);
       setLaboratorios(laboratoriosData);
       setRevisionesPorPedido(revMap);
       setUsuarios(usuariosData);
+      setAllMateriales(matsData);
+      setAllReactivos(reasData);
     } catch (error) {
       console.error(error);
     } finally {
@@ -179,6 +187,8 @@ export default function Pedidos() {
         materiales: actividad.config?.materiales || [],
         reactivos: actividad.config?.reactivos || [],
         equipos: actividad.config?.equipos || [],
+        despensaMateriales: actividad.config?.despensaMateriales || [],
+        despensaReactivos: actividad.config?.despensaReactivos || [],
         usuarioId: usuario.id,
       });
       setSnackbar({ msg: `Actividad "${actividad.nombre}" creada como pedido`, severity: 'success' });
@@ -220,9 +230,6 @@ export default function Pedidos() {
   const pedidosFiltrados = useMemo(() => {
     let lista = [...pedidos];
 
-    if (soloMios && usuarioLogueado) {
-      lista = lista.filter((p) => p.usuarioId === usuarioLogueado.id);
-    }
     if (filtroLab !== '') {
       lista = lista.filter((p) => p.laboratorioId === filtroLab);
     }
@@ -243,7 +250,7 @@ export default function Pedidos() {
     });
 
     return lista;
-  }, [pedidos, soloMios, usuarioLogueado, filtroLab, filtroUser, orden]);
+  }, [pedidos, filtroLab, filtroUser, orden]);
 
   const activos = useMemo(() => {
     let lista = pedidosFiltrados.filter((p) => ESTADOS_ACTIVOS.includes(p.estado));
@@ -304,10 +311,12 @@ export default function Pedidos() {
             <>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button variant="contained" size="large" onClick={() => navigate('/pedidos/nuevo')}>
+                  <Button variant="contained" size="large" onClick={() => navigate('/pedidos/nuevo')}
+                    sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, px: 3, py: 1.2, bgcolor: '#6366F1', transition: 'all 0.2s ease', '&:hover': { bgcolor: '#4F46E5', transform: 'translateY(-1px)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' } }}>
                     + Nuevo Pedido
                   </Button>
-                  <Button variant="outlined" size="large" onClick={() => setShowActividades(true)}>
+                  <Button variant="outlined" size="large" onClick={() => setShowActividades(true)}
+                    sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, px: 3, py: 1.2, borderColor: '#6366F1', color: '#6366F1', transition: 'all 0.2s ease', '&:hover': { borderColor: '#4F46E5', bgcolor: 'rgba(99,102,241,0.04)', transform: 'translateY(-1px)' } }}>
                     Actividades Predefinidas
                   </Button>
                 </Box>
@@ -346,7 +355,7 @@ export default function Pedidos() {
                     </FormControl>
                     <FormControl size="small" sx={{ minWidth: 160 }}>
                       <InputLabel>Usuario</InputLabel>
-                      <Select value={filtroUser} label="Usuario" onChange={(e) => { setFiltroUser(e.target.value as number | ''); if (soloMios) setSoloMios(false); }}>
+                      <Select value={filtroUser} label="Usuario" onChange={(e) => { setFiltroUser(e.target.value as number | ''); }}>
                         <MenuItem value="">Todos</MenuItem>
                         {usuarios.map((u) => <MenuItem key={u.id} value={u.id}>{u.nombre} {u.apellido}</MenuItem>)}
                       </Select>
@@ -364,10 +373,6 @@ export default function Pedidos() {
                     <MenuItem value="id_asc">ID (más antiguo)</MenuItem>
                   </Select>
                 </FormControl>
-                <FormControlLabel
-                  control={<Switch checked={soloMios} onChange={(e) => { setSoloMios(e.target.checked); setFiltroUser(''); }} />}
-                  label="Mis pedidos"
-                />
               </Box>
 
               {tabIndex === 0 ? (
@@ -412,7 +417,7 @@ export default function Pedidos() {
                   usuarioLogueadoId={usuarioLogueado?.id}
                   revisionesRespuestaVistas={revisionesRespuestaVistas}
                   onMarcarRevisionVista={marcarRevisionVista}
-                  vista="tabla"
+                  vista="cards"
                 />
               )}
             </>
@@ -447,6 +452,8 @@ export default function Pedidos() {
         pedido={pedidoToFinalize}
         onConfirm={handleFinalizarConfirm}
         onCancel={() => setPedidoToFinalize(null)}
+        allMateriales={allMateriales}
+        allReactivos={allReactivos}
       />
 
       <ActividadesPredefinidasPanel

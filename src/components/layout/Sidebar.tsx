@@ -21,6 +21,10 @@ import BiotechIcon from "@mui/icons-material/Biotech";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import PeopleIcon from "@mui/icons-material/People";
 
+import PersonIcon from '@mui/icons-material/Person';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import SchoolIcon from '@mui/icons-material/School';
+
 import {
   useNavigate,
   useLocation,
@@ -85,7 +89,7 @@ export default function Sidebar({ mobileOpen, onClose }: Props) {
               className="sidebar-menu-item"
               onClick={() => { navigate(item.path); onClose(); }}
             >
-              <ListItemIcon sx={{ color: "white" }}>
+              <ListItemIcon sx={{ color: "white", minWidth: 40, transition: 'transform 0.2s' }} className="sidebar-menu-icon">
                 {item.icon}
               </ListItemIcon>
               <ListItemText primary={item.text} />
@@ -94,15 +98,22 @@ export default function Sidebar({ mobileOpen, onClose }: Props) {
         </List>
 
         <Box className="sidebar-user">
-          <Typography component="div" className="sidebar-user-name">
-            {user.nombre} {user.apellido || ''}
-          </Typography>
-          <Typography component="div" className="sidebar-user-email">
-            {user.email}
-          </Typography>
-          <Typography component="div" className="sidebar-user-role">
-            {user.rol || 'Usuario'}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+            <PersonIcon sx={{ fontSize: 18, color: '#CBD5E1' }} />
+            <Typography component="div" className="sidebar-user-name">
+              {user.nombre} {user.apellido || ''}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {user.rol === 'Desarrollador' ? (
+              <AdminPanelSettingsIcon sx={{ fontSize: 16, color: '#F59E0B' }} />
+            ) : (
+              <SchoolIcon sx={{ fontSize: 16, color: '#6366F1' }} />
+            )}
+            <Typography component="div" className="sidebar-user-role">
+              {user.rol === 'Desarrollador' ? 'Desarrollador' : 'Profesor'}
+            </Typography>
+          </Box>
           <Button
             fullWidth
             variant="outlined"

@@ -77,13 +77,15 @@ export default function RevisionPendienteDialog({ open, pedido, usuarioId, onCom
   const eqsNombres = (ids: number[] | undefined) =>
     ids?.map((id) => equipos.find((e) => e.id === id)?.name || `#${id}`).join(', ') || '(ninguno)';
 
+  const limpiarDesc = (txt: string) => txt.replace(/(\[Advertencias:.*?\]|__DESPENSA__:\{.*\})/gs, '').trim() || '(sin descripción)';
+
   const campos: CampoInfo[] = pedido ? [
     { clave: 'fecha', label: 'Fecha', original: pedido.fecha || '' },
     { clave: 'horaInicio', label: 'Hora Inicio', original: formatTime(pedido.horaInicio) },
     { clave: 'horaFin', label: 'Hora Fin', original: formatTime(pedido.horaFin) },
     { clave: 'laboratorioId', label: 'Laboratorio', original: labNombre(pedido.laboratorioId) },
     { clave: 'cantidadAlumnos', label: 'Alumnos', original: String(pedido.cantidadAlumnos) },
-    { clave: 'descripcion', label: 'Descripción', original: pedido.descripcion || '(sin descripción)' },
+    { clave: 'descripcion', label: 'Descripción', original: limpiarDesc(pedido.descripcion || '') },
     { clave: 'materiales', label: 'Materiales', original: fmtArr(pedido.materiales?.map((m) => ({ id: m.id, cantidad: m.PedidoMaterial?.cantidad })), materiales) },
     { clave: 'reactivos', label: 'Reactivos', original: fmtArr(pedido.reactivos?.map((r) => ({ id: r.id, cantidad: r.PedidoReactivo?.cantidad })), reactivos) },
     { clave: 'equipos', label: 'Equipos', original: eqsNombres(pedido.Equipments?.map((e) => e.id)) },

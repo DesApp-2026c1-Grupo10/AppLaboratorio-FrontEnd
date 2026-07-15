@@ -3,6 +3,7 @@ import {
   Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
   TableHead, TableRow, TableSortLabel, Dialog, DialogTitle, DialogContent, DialogActions,
   IconButton, Chip, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel, TablePagination,
+  Card, CardContent, CardActions, useMediaQuery,
 } from '@mui/material';
 import type { SnackbarState } from '../types/snackbar';
 import TableSkeleton from '../components/TableSkeleton';
@@ -39,6 +40,7 @@ export default function Equipos() {
   const [total, setTotal] = useState(0);
   const [sortBy, setSortBy] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const isMobile = useMediaQuery('(max-width: 900px)');
 
   const handleSort = (column: string) => {
     if (sortBy === column) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -166,6 +168,43 @@ export default function Equipos() {
         </Box>
 
         <Box className="inv-table-container">
+          {isMobile ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: 1 }}>
+              {loading ? <CircularProgress /> : sortedEquipos.length === 0 ? (
+                <Typography color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>No hay equipos</Typography>
+              ) : sortedEquipos.map((eq) => (
+                <Card key={eq.id} variant="outlined" sx={{ borderRadius: 3 }}>
+                  <CardContent sx={{ pb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>{eq.name}</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                      <Chip label={eq.status} size="small" color={statusColor[eq.status] || 'default'} />
+                      <Chip label={eq.is_movable ? 'Movible' : 'Fijo'} size="small" variant="outlined" />
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">
+                      {[eq.laboratorio?.nombre, eq.laboratorio?.edificio].filter(Boolean).join(' - ') || 'Sin ubicación'}
+                      {eq.ultimaRevision ? ` | Rev: ${new Date(eq.ultimaRevision).toLocaleDateString()}` : ''}
+                    </Typography>
+                  </CardContent>
+                  <CardActions sx={{ flexWrap: 'wrap', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                    <IconButton size="small" onClick={() => verHistorial(eq.id)} title="Historial de uso"><HistoryIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => openEdit(eq)}><EditIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => setDeleteDialog(eq.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
+                  </CardActions>
+                </Card>
+              ))}
+              <TablePagination
+                component="div"
+                count={total}
+                page={page}
+                onPageChange={(_, p) => setPage(p)}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+                labelRowsPerPage="Filas por página:"
+                labelDisplayedRows={({ from, to, count }) => count !== 0 ? `${from}–${to} de ${count} equipos` : '0 resultados'}
+              />
+            </Box>
+          ) : (
+          <>
           <Table>
             <TableHead>
               <TableRow>
@@ -220,6 +259,8 @@ export default function Equipos() {
             labelRowsPerPage="Filas por página:"
             labelDisplayedRows={({ from, to, count }) => count !== 0 ? `${from}–${to} de ${count} equipos` : '0 resultados'}
           />
+          </>
+          )}
         </Box>
       </Box>
 

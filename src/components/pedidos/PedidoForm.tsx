@@ -62,7 +62,6 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, mode = 'pedid
   const watchCantidadAlumnos = watch('cantidadAlumnos');
   const [despensaMaterials, setDespensaMaterials] = useState<ItemSeleccionado[]>([]);
   const [despensaReactivos, setDespensaReactivos] = useState<ItemSeleccionado[]>([]);
-  const [despensaEquipos, setDespensaEquipos] = useState<number[]>([]);
 
   useEffect(() => {
     Promise.all([getMateriales(), getReactivos(), getEquipos()])
@@ -87,6 +86,9 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, mode = 'pedid
         };
         checkPedido(payload).then((result) => {
           setWarnings(result.warnings);
+          if (result.errors?.length) {
+            setError(result.errors.join('. '));
+          }
         }).catch(console.error);
       }
     }
@@ -108,7 +110,6 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, mode = 'pedid
     setSelectedEquipos([]);
     setDespensaMaterials([]);
     setDespensaReactivos([]);
-    setDespensaEquipos([]);
     setStep(0);
     setError('');
     setWarnings([]);
@@ -157,7 +158,6 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, mode = 'pedid
         equipos: selectedEquipos,
         despensaMateriales: despensaMaterials.map((m) => ({ id: m.id, cantidad: m.cantidad })),
         despensaReactivos: despensaReactivos.map((r) => ({ id: r.id, cantidad: r.cantidad })),
-        despensaEquipos,
       };
       if (mode === 'actividad' && onSubmitActividad) {
         await onSubmitActividad(payload);
@@ -346,17 +346,13 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, mode = 'pedid
             {(() => {
               const equiposDelEdificio = equiposDisponibles.filter((eq) => {
                 const lab = eq.laboratorio;
-                return lab && lab.edificio === edificio;
-              });
-              const equiposDeDespensa = equiposDisponibles.filter((eq) => {
-                const lab = eq.laboratorio;
-                return (lab && lab.edificio === 'Despensa') || (!eq.laboratorioId);
+                return (lab && lab.edificio === edificio) || (!eq.laboratorioId && eq.is_movable);
               });
               return (
                 <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>En {edificio}:</Typography>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Equipos disponibles:</Typography>
                   {equiposDelEdificio.length === 0 ? (
-                    <Typography variant="caption" color="text.secondary">No hay equipos en este edificio</Typography>
+                    <Typography variant="caption" color="text.secondary">No hay equipos disponibles</Typography>
                   ) : (
                     <List dense>
                       {equiposDelEdificio.map((eq) => (
@@ -366,32 +362,12 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, mode = 'pedid
                           </ListItemIcon>
                           <ListItemText
                             primary={eq.name}
-                            secondary={eq.laboratorio ? eq.laboratorio.nombre : ''}
+                            secondary={eq.is_movable && !eq.laboratorioId ? 'Movible entre edificios' : eq.laboratorio?.nombre || ''}
                             sx={{ flex: 1 }}
                           />
                         </ListItem>
                       ))}
                     </List>
-                  )}
-                  {equiposDeDespensa.length > 0 && (
-                    <>
-                      <Box sx={{ borderTop: '1px dashed', borderColor: 'warning.light', my: 2 }} />
-                      <Typography variant="subtitle2" sx={{ mb: 1, color: 'warning.dark' }}>En Despensa:</Typography>
-                      <List dense>
-                        {equiposDeDespensa.map((eq) => (
-                          <ListItem key={eq.id} sx={{ border: '1px solid', borderColor: 'warning.light', borderRadius: 2, mb: 0.5, bgcolor: despensaEquipos.includes(eq.id) ? alpha('#f59e0b', 0.06) : 'transparent' }}>
-                            <ListItemIcon>
-                              <Checkbox checked={despensaEquipos.includes(eq.id)} onChange={() => setDespensaEquipos(despensaEquipos.includes(eq.id) ? despensaEquipos.filter(id => id !== eq.id) : [...despensaEquipos, eq.id])} color="warning" />
-                            </ListItemIcon>
-                            <ListItemText
-                              primary={eq.name}
-                              secondary="En Despensa"
-                              sx={{ flex: 1 }}
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
-                    </>
                   )}
                 </Box>
               );
@@ -450,15 +426,7 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, mode = 'pedid
                   })}
                 </Box>
               )}
-              {despensaEquipos.length > 0 && (
-                <Box>
-                  <Typography variant="subtitle2" sx={{ color: 'warning.dark' }}>Equipos (traer de Despensa):</Typography>
-                  {despensaEquipos.map(id => {
-                    const eq = equipos.find(e => e.id === id);
-                    return <Chip key={id} label={eq?.name || `ID#${id}`} size="small" color="warning" variant="outlined" sx={{ mr: 0.5, mb: 0.5 }} />;
-                  })}
-                </Box>
-              )}
+
             </Box>
           </Box>
         );
@@ -480,30 +448,35 @@ export default function PedidoForm({ onSubmitPedido, laboratorios, mode = 'pedid
         {renderStepContent()}
       </Paper>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, flexWrap: 'wrap', gap: 1 }}>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3, alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
+        <Box>
           {step > 0 && (
-            <Button startIcon={<ArrowBack />} onClick={handleBack} variant="outlined">
+            <Button startIcon={<ArrowBack />} onClick={handleBack} variant="outlined"
+              sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '12px', px: 3.5, py: 1, border: '2px solid', borderColor: '#6366F1', color: '#6366F1', transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)', '&:hover': { borderColor: '#4F46E5', bgcolor: 'rgba(99,102,241,0.06)', transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(99,102,241,0.2)' } }}>
               Anterior
             </Button>
           )}
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
           {step < STEPS.length - 1 ? (
-            <Button type="button" endIcon={<ArrowForward />} onClick={handleNext} variant="contained">
+            <Button type="button" endIcon={<ArrowForward />} onClick={handleNext} variant="contained"
+              sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '12px', px: 4.5, py: 1.2, background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)', boxShadow: '0 4px 15px rgba(99,102,241,0.35)', transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)', '&:hover': { background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)', transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(99,102,241,0.5)' } }}>
               Siguiente
             </Button>
           ) : (
-            <Button type="button" variant="contained" color="primary" size="large" disabled={submitting}
-              onClick={() => { if (step === STEPS.length - 1) crearPedido(getValues()); }}>
+            <Button type="button" variant="contained" size="large" disabled={submitting}
+              onClick={() => { if (step === STEPS.length - 1) crearPedido(getValues()); }}
+              sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '12px', px: 5, py: 1.4, background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)', boxShadow: '0 4px 15px rgba(99,102,241,0.35)', transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)', '&:hover': { background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)', transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(99,102,241,0.5)' }, '&.Mui-disabled': { background: '#cbd5e1', boxShadow: 'none' } }}>
               {submitting ? 'Creando...' : mode === 'actividad' ? 'Crear Actividad' : 'Crear Pedido'}
             </Button>
           )}
-          <Button type="button" variant="outlined" color="error" size="large" onClick={resetForm}>
+          <Button type="button" variant="outlined" size="large" onClick={resetForm}
+            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '12px', px: 3.5, py: 1, border: '2px solid', borderColor: '#ef4444', color: '#ef4444', transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)', '&:hover': { borderColor: '#dc2626', bgcolor: 'rgba(239,68,68,0.06)', transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(239,68,68,0.2)' } }}>
             Cancelar
           </Button>
           {onActividadesClick && step === 0 && (
-            <Button type="button" variant="outlined" size="large" onClick={(e) => { e.currentTarget.blur(); onActividadesClick(); }}>
+            <Button type="button" variant="outlined" size="large" onClick={(e) => { e.currentTarget.blur(); onActividadesClick(); }}
+              sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '12px', px: 3.5, py: 1, border: '2px solid', borderColor: '#6366F1', color: '#6366F1', transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)', '&:hover': { borderColor: '#4F46E5', bgcolor: 'rgba(99,102,241,0.06)', transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(99,102,241,0.2)' } }}>
               Actividades Predefinidas
             </Button>
           )}

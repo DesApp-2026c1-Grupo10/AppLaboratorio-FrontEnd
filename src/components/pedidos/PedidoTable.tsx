@@ -72,9 +72,37 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, ca
     return aV < bV ? (sortOrder === 'asc' ? -1 : 1) : aV > bV ? (sortOrder === 'asc' ? 1 : -1) : 0;
   });
 
-  const tieneRespuestaNoVista = (pedidoId: number) => {
-    const info = revisionesPorPedido?.[pedidoId];
-    return info?.procesada && !info.pendiente && !revisionesRespuestaVistas?.has(pedidoId);
+  const tienePendiente = (pedido: Pedido) => revisionesPorPedido?.[pedido.id]?.pendiente === true;
+  const tieneNoVisto = (pedido: Pedido) => {
+    const info = revisionesPorPedido?.[pedido.id];
+    const hayProcesada = info?.procesada && !info.pendiente;
+    return hayProcesada && !revisionesRespuestaVistas?.has(pedido.id);
+  };
+
+  const btnRevision = (pedido: Pedido) => {
+    const flag = tienePendiente(pedido) || tieneNoVisto(pedido);
+    return (
+      <Button size="small" onClick={(e) => { e.stopPropagation(); navigate(`/pedidos/revision/${pedido.id}`); }}
+        sx={{
+          textTransform: 'none', fontWeight: 700, borderRadius: '8px', px: 2,
+          ...(flag
+            ? {
+                background: 'linear-gradient(90deg, #ff0000, #ff7700, #ffdd00, #00ff00, #0077ff, #8b00ff, #ff0000)',
+                backgroundSize: '400% 100%',
+                color: '#fff',
+                animation: 'rainbowMove 1.5s linear infinite',
+                '@keyframes rainbowMove': {
+                  '0%': { backgroundPosition: '0% 50%' },
+                  '100%': { backgroundPosition: '400% 50%' },
+                },
+                '&:hover': { opacity: 0.85, transform: 'scale(1.05)' },
+              }
+            : { color: 'primary.main' }
+          ),
+        }}>
+        Revisión
+      </Button>
+    );
   };
 
   const verHistorial = async (id: number) => {
@@ -114,11 +142,7 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, ca
 
   const renderAcciones = (pedido: Pedido) => (
     <>
-      {pedido.estado === 'Pendiente' && (
-        <Button size="small" color="primary" onClick={(e) => { e.currentTarget.blur(); navigate(`/pedidos/revision/${pedido.id}`); }}>
-          Revisión
-        </Button>
-      )}
+      {pedido.estado === 'Pendiente' && btnRevision(pedido)}
       {pedido.estado === 'Pendiente' && (
         <>
           {esAdmin && <Button onClick={() => aceptarPedido(pedido.id)} color="primary" size="small">Aceptar</Button>}
@@ -192,9 +216,7 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, ca
                 <TableCell>
                   <Button size="small" onClick={(e) => { e.stopPropagation(); setDetallePedido(pedido); setDetalleOpen(true); }}>Ver</Button>
                   <Button size="small" onClick={(e) => { e.stopPropagation(); verHistorial(pedido.id); }}>Historial</Button>
-                  {pedido.estado === 'Pendiente' && (
-                    <Button size="small" color="primary" onClick={(e) => { e.stopPropagation(); navigate(`/pedidos/revision/${pedido.id}`); }}>Revisión</Button>
-                  )}
+                  {pedido.estado === 'Pendiente' && btnRevision(pedido)}
                 </TableCell>
               </TableRow>
             ))}
@@ -233,11 +255,7 @@ export default function PedidoTable({ pedidos, aceptarPedido, rechazarPedido, ca
               <Button size="small" onClick={() => verHistorial(pedido.id)}>
                 Historial
               </Button>
-              {pedido.estado === 'Pendiente' && (
-                <Button size="small" color="primary" onClick={(e) => { e.currentTarget.blur(); navigate(`/pedidos/revision/${pedido.id}`); }}>
-                  Revisión
-                </Button>
-              )}
+              {pedido.estado === 'Pendiente' && btnRevision(pedido)}
               {pedido.estado === 'Pendiente' && (
                 <>
                   {esAdmin && <Button onClick={() => aceptarPedido(pedido.id)} color="primary" size="small">Aceptar</Button>}

@@ -4,7 +4,7 @@ import {
   Box, CircularProgress, TextField, Button, Snackbar, Alert, Accordion, AccordionSummary,
   AccordionDetails, Typography, Dialog, DialogTitle, DialogContent, DialogActions, IconButton,
 } from "@mui/material";
-import { Edit as EditIcon } from '@mui/icons-material';
+import { Edit as EditIcon, AddCircleOutlined as AddIcon } from '@mui/icons-material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type { SnackbarState } from "../types/snackbar";
 import type { Laboratorio } from "../types/laboratorio";
@@ -133,7 +133,10 @@ export default function Laboratorios() {
                 <TextField label="Capacidad" value={capacidad} onChange={(e) => { const v = e.target.value; if (/^\d*$/.test(v)) setCapacidad(v === "" ? 0 : Number(v)); }} fullWidth />
                 <TextField label="Edificio" value={edificio} onChange={(e) => setEdificio(e.target.value)} fullWidth />
               </div>
-              <Button type="submit" variant="contained" sx={{ mt: 3 }}>Crear laboratorio</Button>
+              <Button type="submit" variant="contained" startIcon={<AddIcon />}
+                sx={{ mt: 3, textTransform: 'none', fontWeight: 600, borderRadius: 2, px: 4, py: 1.2, bgcolor: '#6366F1', transition: 'all 0.2s ease', '&:hover': { bgcolor: '#4F46E5', transform: 'translateY(-1px)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' } }}>
+                Crear laboratorio
+              </Button>
             </form>
           )}
 

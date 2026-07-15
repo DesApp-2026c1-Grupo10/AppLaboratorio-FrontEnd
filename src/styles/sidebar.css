@@ -9,18 +9,56 @@
   font-weight: 700;
 }
 
+/* efecto moderno: borde izquierdo + glow */
 .sidebar-menu-item {
   margin-left: 8px;
   margin-right: 8px;
   border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+}
+
+.sidebar-menu-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 60%;
+  background: linear-gradient(180deg, #6366F1, #8B5CF6);
+  border-radius: 0 3px 3px 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  opacity: 0;
+}
+
+.sidebar-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  transform: translateX(3px);
+}
+
+.sidebar-menu-item:hover::before {
+  transform: translateY(-50%) scaleY(1);
+  opacity: 1;
+}
+
+.sidebar-menu-item:hover .sidebar-menu-icon {
+  transform: translateX(2px);
 }
 
 .sidebar-menu-item.Mui-selected {
-  background-color: #1E2A5A;
+  background-color: rgba(99, 102, 241, 0.12);
+  box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.08);
+}
+
+.sidebar-menu-item.Mui-selected::before {
+  transform: translateY(-50%) scaleY(1);
+  opacity: 1;
 }
 
 .sidebar-menu-item.Mui-selected:hover {
-  background-color: #1E2A5A;
+  background-color: rgba(99, 102, 241, 0.18);
 }
 
 .sidebar-user {
@@ -30,33 +68,31 @@
 
 .sidebar-user-name {
   font-weight: 700;
-}
-
-.sidebar-user-email {
-  color: #CBD5E1;
-  font-size: 13px;
+  font-size: 14px;
+  color: #fff;
 }
 
 .sidebar-user-role {
   color: #94A3B8;
   font-size: 12px;
-  margin-bottom: 16px;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .sidebar-logout-btn {
-  /*background-color: #1E2A5A !important;*/
   border-color: white !important;
   color: white !important;
   border-radius: 8px !important;
   text-transform: none !important;
+  margin-top: 12px;
+  transition: all 0.2s ease !important;
 }
 
 .sidebar-logout-btn:hover {
-  /*background-color: #2B3B75 !important;*/
   background-color: white !important;
   color: #0B1739 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255,255,255,0.15);
 }
 
 .sidebar-sub-item {
@@ -73,5 +109,3 @@
 .sidebar-sub-item.Mui-selected:hover {
   background-color: #1E2A5A;
 }
-
-

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Snackbar, Alert, Box, CircularProgress, Typography, Button } from '@mui/material';
+import { Snackbar, Alert, Box, CircularProgress, Typography, Button, Dialog } from '@mui/material';
+import { CheckCircle } from '@mui/icons-material';
 import type { SnackbarState } from '../types/snackbar';
 import PedidoForm from '../components/pedidos/PedidoForm';
 import { createPedido } from '../api/pedidos';
@@ -14,6 +15,7 @@ export default function NuevoPedido() {
   const { on } = useWs();
   const [laboratorios, setLaboratorios] = useState<Laboratorio[]>([]);
   const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     getLaboratorios().then(setLaboratorios).catch(console.error);
@@ -32,7 +34,7 @@ export default function NuevoPedido() {
       ...data,
       usuarioId: usuario.id,
     });
-    setSnackbar({ msg: 'Pedido creado correctamente', severity: 'success' });
+    setSuccess(true);
     setTimeout(() => navigate('/pedidos'), 1500);
   };
 
@@ -62,6 +64,13 @@ export default function NuevoPedido() {
           />
         )}
       </Box>
+
+      <Dialog open={success} PaperProps={{ sx: { borderRadius: 4, p: 6, textAlign: 'center', minWidth: 400 } }}>
+        <CheckCircle sx={{ fontSize: 80, color: '#22c55e', mb: 2 }} />
+        <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>Pedido creado correctamente</Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>Volviendo al inicio...</Typography>
+        <CircularProgress size={24} />
+      </Dialog>
 
       {snackbar && <Snackbar open autoHideDuration={3000} onClose={() => setSnackbar(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}><Alert severity={snackbar.severity}>{snackbar.msg}</Alert></Snackbar>}
     </AppLayout>

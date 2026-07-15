@@ -10,6 +10,8 @@ export interface ActividadPredefinida {
     materiales?: { id: number; cantidad: number }[];
     reactivos?: { id: number; cantidad: number }[];
     equipos?: number[];
+    despensaMateriales?: { id: number; cantidad: number }[];
+    despensaReactivos?: { id: number; cantidad: number }[];
   } | null;
   usuarioId: number;
   Usuario?: { id: number; nombre: string; apellido: string };

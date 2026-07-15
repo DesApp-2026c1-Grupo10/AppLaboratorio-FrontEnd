@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Box, CircularProgress, Typography, Button, TextField, Table, TableBody, TableCell,
   TableHead, TableRow, TableSortLabel, Dialog, DialogTitle, DialogContent, DialogActions,
-  IconButton, Chip, Snackbar, Alert, TablePagination,
+  IconButton, Chip, Snackbar, Alert, TablePagination, Card, CardContent, CardActions, alpha, useMediaQuery,
 } from '@mui/material';
 import type { SnackbarState } from '../types/snackbar';
 import TableSkeleton from '../components/TableSkeleton';
@@ -35,6 +35,7 @@ export default function Materiales() {
   const [total, setTotal] = useState(0);
   const [sortBy, setSortBy] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const isMobile = useMediaQuery('(max-width: 900px)');
 
   const usuarioStorage = localStorage.getItem("usuario") || localStorage.getItem("user");
   const usuarioLogueado = usuarioStorage ? JSON.parse(usuarioStorage) : null;
@@ -167,6 +168,45 @@ export default function Materiales() {
         </Box>
 
         <Box className="inv-table-container">
+          {isMobile ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: 1 }}>
+              {loading ? <CircularProgress /> : sortedMateriales.length === 0 ? (
+                <Typography color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>No hay materiales</Typography>
+              ) : sortedMateriales.map((m) => (
+                <Card key={m.id} variant="outlined" sx={{ borderRadius: 3 }}>
+                  <CardContent sx={{ pb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>{m.name}</Typography>
+                    {m.descripcion && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>{m.descripcion}</Typography>}
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                      <Chip label={`Stock: ${m.stock}`} size="small" color={m.stockMinimo > 0 && m.stock <= m.stockMinimo ? 'warning' : 'default'} />
+                      <Chip label={`Comp: ${m.stockComprometido || 0}`} size="small" variant="outlined" />
+                      <Chip label={`Disp: ${(m.stock || 0) - (m.stockComprometido || 0)}`} size="small" variant="outlined" color="primary" />
+                      <Chip label={`Mín: ${m.stockMinimo}`} size="small" variant="outlined" />
+                      <Chip label={m.unit || '-'} size="small" variant="outlined" />
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">{m.laboratorio?.nombre || 'Sin laboratorio'}</Typography>
+                  </CardContent>
+                  <CardActions sx={{ flexWrap: 'wrap', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+                    <IconButton size="small" onClick={() => setComprarMaterial(m)} title="Comprar" color="success"><ShoppingCartIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => navigate(`/movimientos?materialId=${m.id}`)} title="Ver movimientos"><HistoryIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => openEdit(m)}><EditIcon fontSize="small" /></IconButton>
+                    <IconButton size="small" onClick={() => setDeleteDialog(m.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
+                  </CardActions>
+                </Card>
+              ))}
+              <TablePagination
+                component="div"
+                count={total}
+                page={page}
+                onPageChange={(_, p) => setPage(p)}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+                labelRowsPerPage="Filas por página:"
+                labelDisplayedRows={({ from, to, count }) => count !== 0 ? `${from}–${to} de ${count} materiales` : '0 resultados'}
+              />
+            </Box>
+          ) : (
+          <>
           <Table>
             <TableHead>
               <TableRow>
@@ -230,6 +270,8 @@ export default function Materiales() {
             labelRowsPerPage="Filas por página:"
             labelDisplayedRows={({ from, to, count }) => count !== 0 ? `${from}–${to} de ${count} materiales` : '0 resultados'}
           />
+          </>
+          )}
         </Box>
       </Box>
 
